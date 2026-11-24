@@ -77,7 +77,7 @@ Intensity knobs, per look:
 - **beat gap** (`gap`): hype 0.85 s ↔ calm 1.8 s. Never two effects starting within 0.4 s except camera + its effect.
 - **camera**: `shake` is loud — max every 2nd beat (hype), never in calm/luxury.
 - **обводки**: 1–3 per reel. **перебивки**: hype/sell every 3–4 s, podcast every ~3 s, calm 1–2 total.
-- **sound** (`sfxVolume`): hype 1.0, sell 0.9, podcast 0.7, luxury 0.6, calm 0.5. With a music bed, drop 0.2.
+- **sound** (`sfxVolume`): 1.0 with the accent rules below; calm/luxury 0.8.
 - **music** (`mm music`): 0.4 in pauses / 0.2 under the voice is the default; calm and luxury 0.3 / 0.15; hype 0.5 / 0.25. Start the track where its chorus or drop meets the reel's turn (offer, the speaker on camera, the final call).
 
 ## 6. Three worked briefs
@@ -87,3 +87,16 @@ Intensity knobs, per look:
 **"Подкаст: почему ИИ не заменит программистов"** — `podcast`; "по данным" + number → `counter`, "рост" → `chart`, "во-первых / во-вторых" → `title` with `path`; captions `serif`; rim outline on the hook.
 
 **"Объясняем родителям, что ребёнок делает на уроке"** — `calm`, `clean` captions, steps → `checklist`, one `quote` from a parent, no shakes, sound at 0.5.
+
+## Sound design
+
+Inflation kills sound: if every effect makes a noise, none of them means anything. A 40 s reel gets **8–16 cues**, not 70.
+
+1. **A sound marks a change of state the viewer must register**: a new section (title card), the music drop, the offer facts (gift, deadline, scarcity), a message arriving, the final ask. Motion that is only decoration — outlines, halos, rims, orbits, particles, rays, ribbons, punches, shakes, caption words flying behind the head, checklist ticks, typing — stays silent. The motion already is the accent.
+2. **Budget**: ≤ 4 cues in any 10 s, ≥ 1.2 s apart (the engine enforces it for automatic sounds). Two identical objects in a row (two gift cards) = one gesture, same sound.
+3. **One meaning = one sound for the whole reel**: title card always whoosh-big + impact, an offer card always pop, a number always `counter`, a message always `notify`. The second title card must sound like the first so it reads instantly.
+4. **Layers**: at most 2 at one moment, and only on the pillars (title cards, the drop).
+5. **Put sounds in the speech gaps.** Under speech keep mid/high sounds ≤ 0.4, low booms ≤ 0.45. Align whooshes and risers by their peak (`peak: true`).
+6. **Let the music work**: one riser peaking on the chorus/drop + one impact, then nothing for ~5 s — the drop is the reward. `music.drop` + `dropDuck` lift the bed a little there; a `dips` entry (≈0.4 s at 0.08) before the call to action is a taste call — render it as a variant.
+7. **Silence is the contrast.** Open the hook on voice + music; end on the music tail, no final hit.
+8. When unsure, render 2–3 variants (`edit.A.json`… → `--variant A`): A = structure only (~8 cues), B = meaning accents (~15), C = motion-led, no UI sounds (~12).

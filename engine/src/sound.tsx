@@ -1,10 +1,13 @@
-// Sound design. Every effect plays one or more layers from the library in public/sfx
-// (built from a sound pack by `mm sfx`, listed in public/sfx/index.json with each sound's peak).
-// Whooshes and risers are placed so their peak lands on the moment (a cut, a word landing),
-// not their start; repeated effects rotate through variants so the reel never sounds looped.
+// Sound design. Sound is an accent, not a decoration: a sound plays only where the reel changes
+// state and the viewer must register it — a title card, a key number, a message arriving, a
+// section cut, the music drop, the final ask. Outlines, halos, orbits, punches, shakes, rays,
+// caption words and checklist ticks are silent unless an effect says `sound: true`.
+// One meaning = one sound for the whole reel (no rotating variants), and a scheduler keeps the
+// density down: at most 4 cues in any 10 s, at least 1.2 s apart, higher priority wins.
+// The library is public/sfx (built by `mm sfx`, index.json has each sound's peak); whooshes and
+// risers are placed so their peak lands on the moment, not their start.
 import React from "react";
 import { Audio, Sequence, staticFile, useVideoConfig } from "remotion";
-import type { Cap } from "./captions";
 import type { Edit, Fx, Meta, Word } from "./types";
 
 export type SfxIndex = Record<string, { dur: number; peak: number }>;
@@ -14,46 +17,44 @@ export type SfxIndex = Record<string, { dur: number; peak: number }>;
 export const voiceGain = (meta: Meta) => Math.min(1, Math.pow(10, ((meta.lufs ?? -16) + 16) / 20));
 
 type Layer = {
-  name: string | string[]; // several = rotate per occurrence of the effect
+  name: string;
   vol: number;
-  at?: number | "mid"; // seconds after the effect starts ("mid" = middle of the effect)
+  at?: number | "mid" | "end"; // seconds after the effect starts, its middle or its end
   peak?: boolean; // line up the sound's peak with `at` instead of its start
-  len?: (fx: Fx) => number; // cut the sound after this many seconds (typing beds)
 };
+// prio: 0 = structure (title card, drop, CTA) … 3 = section cuts; `auto` = plays without being asked
+type Rule = { layers: Layer[]; prio: number; auto: (fx: Fx) => boolean };
 
-const W = ["whoosh-1", "whoosh-2", "whoosh-4"];
+const yes = () => true;
+const no = () => false;
 
-const MAP: Partial<Record<Fx["type"], Layer[]>> = {
-  behind: [{ name: W, vol: 0.5, at: 0.12, peak: true }],
-  pop: [{ name: ["pop-1", "pop-2", "pop-3"], vol: 0.55, at: 0.05 }, { name: "whoosh-click", vol: 0.25, at: 0.12, peak: true }],
-  halo: [{ name: "whoosh-chimes", vol: 0.45, at: 0.15, peak: true }],
-  card: [{ name: ["ui-1", "ui-2", "ui-3", "ui-4"], vol: 0.5 }, { name: "pop-1", vol: 0.3, at: 0.3 }],
-  orbit: [{ name: ["transform-1", "transform-2"], vol: 0.45 }, { name: "whoosh-3", vol: 0.3, at: 0.35, peak: true }],
-  punch: [{ name: "zoom", vol: 0.35 }],
-  broll: [{ name: "whoosh-camera", vol: 0.6, peak: true }],
-  film: [{ name: "whoosh-click", vol: 0.5, at: 0.1, peak: true }, { name: "riser-short", vol: 0.25, at: 0.3, peak: true }],
-  search: [{ name: "click-2", vol: 0.45 }, { name: "type", vol: 0.4, at: 0.13, len: (fx) => fx.dur * 0.6 }],
-  rays: [{ name: "whoosh-chimes", vol: 0.35, at: 0.2, peak: true }],
-  ribbon: [{ name: ["whoosh-3", "whoosh-4"], vol: 0.5, at: 0.25, peak: true }],
-  quote: [{ name: "pop-4", vol: 0.45 }, { name: "type", vol: 0.3, at: 0.17, len: (fx) => (fx.type === "quote" ? Math.min(fx.dur - 0.3, fx.text.length / 39) : 0) }],
-  shake: [{ name: ["hit-1", "hit-3", "hit-2", "hit-4"], vol: 0.6 }, { name: ["impact-2", "impact-1"], vol: 0.3 }],
-  whip: [{ name: "whoosh-sharp", vol: 0.6, at: "mid", peak: true }],
-  counter: [{ name: "counter", vol: 0.55, at: 0.05 }, { name: "beep-3", vol: 0.35, at: 0.85 }],
-  chat: [{ name: "pop-2", vol: 0.35 }, { name: "notify", vol: 0.5, at: 0.4 }],
-  progress: [{ name: "toggle", vol: 0.45 }, { name: "build-1", vol: 0.35, at: 0.2 }],
-  particles: [{ name: "hud", vol: 0.4 }],
-  chart: [{ name: "build-2", vol: 0.45 }, { name: "riser-short", vol: 0.3, at: 0.7, peak: true }],
-  title: [
-    { name: "riser-short", vol: 0.35, peak: true },
-    { name: "whoosh-big", vol: 0.55, at: 0.05, peak: true },
-    { name: ["impact-bell", "impact-1"], vol: 0.4, at: 0.12 },
-  ],
-};
-
-const OUTLINE: Record<string, Layer> = {
-  neon: { name: "tech", vol: 0.5 },
-  sticker: { name: "rubber", vol: 0.5 },
-  rim: { name: "blur-out", vol: 0.45 },
+const RULES: Partial<Record<Fx["type"], Rule>> = {
+  // structure
+  title: { prio: 0, auto: yes, layers: [{ name: "whoosh-big", vol: 0.5, peak: true }, { name: "impact-2", vol: 0.35 }] },
+  // meaning: numbers, things that arrive, the offer
+  counter: { prio: 1, auto: yes, layers: [{ name: "counter", vol: 0.4 }] },
+  chart: { prio: 1, auto: yes, layers: [{ name: "riser-short", vol: 0.35, at: "end", peak: true }] },
+  card: { prio: 1, auto: (fx) => fx.type === "card" && !!fx.accent, layers: [{ name: "pop-1", vol: 0.4 }] },
+  chat: { prio: 2, auto: yes, layers: [{ name: "notify", vol: 0.45, at: 0.4 }] }, // when the message lands, not the typing dots
+  // cuts
+  whip: { prio: 3, auto: (fx) => fx.type === "whip" && !!fx.section, layers: [{ name: "whoosh-1", vol: 0.4, at: "mid", peak: true }] },
+  broll: { prio: 3, auto: yes, layers: [{ name: "whoosh-camera", vol: 0.45, peak: true }] },
+  // decoration — silent unless the effect has `sound: true`
+  behind: { prio: 4, auto: no, layers: [{ name: "whoosh-1", vol: 0.35, at: 0.12, peak: true }] },
+  pop: { prio: 4, auto: no, layers: [{ name: "pop-1", vol: 0.4 }] },
+  halo: { prio: 4, auto: no, layers: [{ name: "whoosh-chimes", vol: 0.35, at: 0.15, peak: true }] },
+  orbit: { prio: 4, auto: no, layers: [{ name: "transform-1", vol: 0.35 }] },
+  punch: { prio: 4, auto: no, layers: [{ name: "zoom", vol: 0.3 }] },
+  film: { prio: 4, auto: no, layers: [{ name: "whoosh-click", vol: 0.4, at: 0.1, peak: true }] },
+  search: { prio: 4, auto: no, layers: [{ name: "click-2", vol: 0.4 }] },
+  rays: { prio: 4, auto: no, layers: [{ name: "whoosh-chimes", vol: 0.3, at: 0.2, peak: true }] },
+  ribbon: { prio: 4, auto: no, layers: [{ name: "whoosh-3", vol: 0.35, at: 0.25, peak: true }] },
+  quote: { prio: 4, auto: no, layers: [{ name: "pop-4", vol: 0.35 }] },
+  shake: { prio: 4, auto: no, layers: [{ name: "hit-3", vol: 0.45 }] },
+  progress: { prio: 4, auto: no, layers: [{ name: "toggle", vol: 0.35 }] },
+  particles: { prio: 4, auto: no, layers: [{ name: "hud", vol: 0.3 }] },
+  checklist: { prio: 4, auto: no, layers: [{ name: "click-crispy", vol: 0.4, at: "end" }] },
+  outline: { prio: 4, auto: no, layers: [{ name: "tech", vol: 0.35 }] },
 };
 
 // names from older edits → the library
@@ -62,59 +63,67 @@ const ALIAS: Record<string, string> = {
   swish: "whoosh-chimes", tick: "click-crispy", riser: "riser-short",
 };
 
-export const Sounds: React.FC<{ edit: Edit; index: SfxIndex; plan: Cap[]; gain: number }> = ({ edit, index, plan, gain }) => {
-  const { fps } = useVideoConfig();
-  const level = (edit.sfxVolume ?? 1) * gain;
-  const out: React.ReactNode[] = [];
-  const seen: Record<string, number> = {};
-  const play = (key: string, name: string, t: number, vol: number, len?: number) => {
-    const n = index[name] ? name : ALIAS[name];
-    if (!n || !index[n]) return;
-    const from = Math.max(0, Math.round(t * fps));
-    const dur = Math.max(1, Math.round((len ?? index[n].dur + 0.1) * fps));
-    out.push(
-      <Sequence key={key} from={from} durationInFrames={dur} layout="none">
-        <Audio src={staticFile(`sfx/${n}.mp3`)} volume={vol * level} />
-      </Sequence>,
-    );
-  };
-  const layer = (key: string, l: Layer, fx: Fx, k: number) => {
-    const name = Array.isArray(l.name) ? l.name[k % l.name.length] : l.name;
-    const n = index[name] ? name : ALIAS[name];
-    const at = fx.at + (l.at === "mid" ? fx.dur / 2 : (l.at ?? 0));
-    const t = at - (l.peak && n && index[n] ? index[n].peak : 0);
-    const len = l.len?.(fx);
-    if (len !== undefined && len <= 0.05) return;
-    play(key, name, t, l.vol, len);
-  };
+export const BUDGET = { per10s: 4, gap: 1.2 };
 
+type Cue = { key: string; t: number; prio: number; type: string; play: { name: string; at: number; vol: number }[] };
+
+// Which effects get a sound: hand-placed `sfx` cues always play; automatic ones are added by
+// priority while they fit the budget (an identical sound on the same effect type within 1 s,
+// like two gift cards in a row, counts as one gesture).
+export function cueSheet(edit: Edit, index: SfxIndex): Cue[] {
+  const has = (n: string) => (index[n] ? n : ALIAS[n] && index[ALIAS[n]] ? ALIAS[n] : null);
+  const manual: Cue[] = [];
+  const auto: Cue[] = [];
   edit.fx.forEach((fx, i) => {
-    if (fx.type === "sfx") return play(`${i}`, fx.name, fx.at, fx.volume ?? 0.6);
-    if (edit.sfx === false) return;
-    const k = (seen[fx.type] = (seen[fx.type] ?? -1) + 1);
-    if (fx.type === "checklist") {
-      // one tick per item as it lands (same timing as the pills), a soft chime on the last
-      const step = Math.max(5, Math.min(10, Math.floor((fx.dur * fps - 10) / fx.items.length))) / fps;
-      fx.items.forEach((_, j) => play(`${i}-${j}`, j % 2 ? "beep-1" : "click-crispy", fx.at + j * step + 5 / fps, 0.55));
-      play(`${i}-ok`, "success", fx.at + fx.items.length * step + 0.15, 0.25);
+    if (fx.type === "sfx") {
+      const n = has(fx.name);
+      if (!n) return;
+      const at = fx.at - (fx.peak ? index[n].peak : 0);
+      manual.push({ key: `${i}`, t: fx.at, prio: -1, type: "sfx", play: [{ name: n, at, vol: fx.volume ?? 0.5 }] });
       return;
     }
-    const layers = fx.type === "outline" ? [OUTLINE[fx.style ?? "neon"]] : MAP[fx.type] ?? [];
-    layers.forEach((l, j) => layer(`${i}-${j}`, l, fx, k));
-  });
-
-  // a soft whoosh when a caption word goes behind the person
-  if (edit.sfx !== false)
-    plan.forEach((c, i) => {
-      if (!c.behind) return;
-      const name = W[i % W.length];
-      if (index[name]) play(`cap-${i}`, name, c.words[c.key].s - index[name].peak + 0.1, 0.25);
+    const rule = RULES[fx.type];
+    if (!rule || fx.sound === false || edit.sfx === false) return;
+    if (!(fx.sound === true || rule.auto(fx))) return;
+    const moment = (l: Layer) => fx.at + (l.at === "mid" ? fx.dur / 2 : l.at === "end" ? fx.dur : (l.at ?? 0));
+    const play = rule.layers.flatMap((l) => {
+      const n = has(l.name);
+      return n ? [{ name: n, at: moment(l) - (l.peak ? index[n].peak : 0), vol: l.vol }] : [];
     });
-  return <>{out}</>;
+    if (play.length) auto.push({ key: `${i}`, t: moment(rule.layers[0]), prio: fx.sound === true ? 0.5 : rule.prio, type: fx.type, play });
+  });
+  const kept: Cue[] = [...manual];
+  for (const c of auto.sort((a, b) => a.prio - b.prio || a.t - b.t)) {
+    const pair = (k: Cue) => k.type === c.type && k.play[0].name === c.play[0].name && Math.abs(k.t - c.t) < 1;
+    const near = kept.some((k) => Math.abs(k.t - c.t) < BUDGET.gap && !pair(k));
+    // with this cue added, does any 10 s window hold more than the budget?
+    const ts = [...kept.filter((k) => !pair(k)).map((k) => k.t), c.t];
+    const crowded = ts.some((w) => ts.filter((x) => x >= w && x < w + 10).length > BUDGET.per10s);
+    if (!near && !crowded) kept.push(c);
+  }
+  return kept.sort((a, b) => a.t - b.t);
+}
+
+export const Sounds: React.FC<{ edit: Edit; index: SfxIndex; gain: number }> = ({ edit, index, gain }) => {
+  const { fps } = useVideoConfig();
+  const level = (edit.sfxVolume ?? 1) * gain;
+  return (
+    <>
+      {cueSheet(edit, index).flatMap((c) =>
+        c.play.map((p, j) => (
+          <Sequence key={`${c.key}-${j}`} from={Math.max(0, Math.round(p.at * fps))} durationInFrames={Math.max(1, Math.round((index[p.name].dur + 0.1) * fps))} layout="none">
+            <Audio src={staticFile(`sfx/${p.name}.mp3`)} volume={p.vol * level} />
+          </Sequence>
+        )),
+      )}
+    </>
+  );
 };
 
 // Music bed: `volume` in pauses, ducks to `duck` while someone speaks (starts dipping 0.15 s before
-// a phrase, comes back over 0.4 s after it), fades in at the start and out over the last second.
+// a phrase, comes back over 0.4 s after it), fades in at the start and out at the end. From `drop`
+// (the chorus) the voice-level becomes `dropDuck`; `dips` pull the bed down to a level for a moment
+// (a breath before the call to action).
 export const Music: React.FC<{ music: NonNullable<Edit["music"]>; words: Word[]; gain: number }> = ({ music, words, gain }) => {
   const { fps, durationInFrames } = useVideoConfig();
   const curve = React.useMemo(() => {
@@ -143,13 +152,24 @@ export const Music: React.FC<{ music: NonNullable<Edit["music"]>; words: Word[];
     }
     return out;
   }, [words, fps, durationInFrames]);
-  const hi = music.volume ?? 0.4, lo = music.duck ?? 0.2;
+  const hi = music.volume ?? 0.4;
+  // 0→1 ramp over `r` seconds after time `at`
+  const ramp = (f: number, at: number, r: number) => Math.min(1, Math.max(0, (f / fps - at) / r));
   return (
     <Audio
       src={staticFile(music.src)}
       volume={(f) => {
-        const fade = Math.min(1, f / (0.3 * fps), (durationInFrames - f) / fps);
-        return Math.max(0, (hi + (lo - hi) * (curve[f] ?? 0)) * fade * gain);
+        const lo = music.drop !== undefined && music.dropDuck !== undefined
+          ? (music.duck ?? 0.2) + (music.dropDuck - (music.duck ?? 0.2)) * ramp(f, music.drop, 0.2)
+          : music.duck ?? 0.2;
+        let v = hi + (lo - hi) * (curve[f] ?? 0);
+        for (const d of music.dips ?? []) {
+          // 0.1 s in, 0.15 s out
+          const k = Math.min(ramp(f, d.from - 0.1, 0.1), 1 - ramp(f, d.to, 0.15));
+          v = v + (d.level - v) * Math.max(0, k);
+        }
+        const fade = Math.min(1, f / (0.3 * fps), (durationInFrames - f) / ((music.fadeOut ?? 1) * fps));
+        return Math.max(0, v * fade * gain);
       }}
     />
   );

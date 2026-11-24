@@ -10,11 +10,11 @@ import { envelope, pop } from "./time";
 import type { Edit, Fx, Head, Meta, Word } from "./types";
 
 // `safe` draws the app UI of that platform over the video (preview only, never in the final render)
-export type ProEditData = { slug: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[]; sfx?: SfxIndex };
+export type ProEditData = { slug: string; editFile?: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[]; sfx?: SfxIndex };
 
 export const calcProEdit: CalculateMetadataFunction<ProEditData> = async ({ props }) => {
   const get = async <T,>(f: string): Promise<T> => (await fetch(staticFile(`${props.slug}/${f}`))).json();
-  const [meta, edit, words, track] = await Promise.all([get<Meta>("meta.json"), get<Edit>("edit.json"), get<Word[]>("words.json"), get<Head[]>("track.json")]);
+  const [meta, edit, words, track] = await Promise.all([get<Meta>("meta.json"), get<Edit>(props.editFile ?? "edit.json"), get<Word[]>("words.json"), get<Head[]>("track.json")]);
   // the sound library is built by `mm sfx`; without it the reel renders silent fx
   const sfx = await fetch(staticFile("sfx/index.json")).then((r) => (r.ok ? (r.json() as Promise<SfxIndex>) : {})).catch(() => ({}));
   return { durationInFrames: Math.floor(meta.duration * meta.fps), fps: meta.fps, width: meta.width, height: meta.height, props: { ...props, meta, edit, words, track, sfx } };
@@ -239,7 +239,7 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, 
       <Layer edit={edit} meta={meta} track={track} side="over" />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,${g.vignette}) 100%)`, pointerEvents: "none" }} />
       <Grain />
-      <Sounds edit={edit} index={sfx ?? {}} plan={plan} gain={voiceGain(meta)} />
+      <Sounds edit={edit} index={sfx ?? {}} gain={voiceGain(meta)} />
       {edit.music ? <Music music={edit.music} words={words} gain={voiceGain(meta)} /> : null}
       {safe ? <SafeOverlay platform={safe} /> : null}
     </AbsoluteFill>

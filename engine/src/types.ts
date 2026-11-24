@@ -19,7 +19,8 @@ export type Word = { w: string; s: number; e: number };
 // per-frame head position from the person matte: top of the head (y) and its centre (x), output pixels
 export type Head = { top: number; x: number };
 
-type Base = { at: number; dur: number };
+// sound: true = this effect gets its sound even if its kind is silent by default, false = never
+type Base = { at: number; dur: number; sound?: boolean };
 
 export type Fx =
   // giant word between the background and the person ("sold", "house")
@@ -29,7 +30,8 @@ export type Fx =
   // glowing arc ring behind the head
   | (Base & { type: "halo"; color?: string })
   // UI card in front: thumbnail + title + green badge ("The house ✓ Sold")
-  | (Base & { type: "card"; title: string; badge?: string; image?: string })
+  // accent: the card is an offer fact (gift, price, deadline) and gets a sound
+  | (Base & { type: "card"; title: string; badge?: string; image?: string; accent?: boolean })
   // app icons orbiting the person, passing behind and in front
   | (Base & { type: "orbit"; icons: string[] })
   // zoom punch on a stressed word
@@ -51,7 +53,8 @@ export type Fx =
   // 3D shake: the scene tilts in perspective and settles, with a push-in
   | (Base & { type: "shake"; scale?: number })
   // whip: the scene smears sideways with motion blur (a cut on the beat)
-  | (Base & { type: "whip"; dir?: 1 | -1 })
+  // section: the whip starts a new part of the reel and gets a whoosh
+  | (Base & { type: "whip"; dir?: 1 | -1; section?: boolean })
   // stat card that counts up ("TOTAL LISTINGS 165")
   | (Base & { type: "counter"; label: string; to: number; from?: number; prefix?: string; suffix?: string })
   // checklist of pills ticking one by one
@@ -69,7 +72,8 @@ export type Fx =
   // full-screen title card between phrases (перебивка): curtain + glass light + metal word
   | (Base & { type: "title"; text: string; kicker?: string; kickerStyle?: "caps" | "serif"; path?: string[]; bg?: string })
   // any sound from public/sfx at a moment
-  | (Base & { type: "sfx"; name: string; volume?: number });
+  // any library sound at a moment; peak: its loudest point lands on `at`
+  | (Base & { type: "sfx"; name: string; volume?: number; peak?: boolean });
 
 export type FxType = Fx["type"];
 
@@ -92,11 +96,16 @@ export type Edit = {
   platform?: "reels" | "tiktok" | "shorts" | "all";
   // the look the plan was made with (tools/looks.mjs), for the record
   look?: string;
-  // auto sound on every effect (whoosh, pop, tick…) and its overall level
+  // automatic accent sounds (false = only hand-placed `sfx` cues) and their overall level
   sfx?: boolean;
   sfxVolume?: number;
   // music bed (`mm music`): `volume` in pauses, `duck` under the voice, both 0–1 of a track levelled to the voice
-  music?: { src: string; volume?: number; duck?: number; from?: string; start?: number };
+  music?: {
+    src: string; volume?: number; duck?: number; from?: string; start?: number;
+    drop?: number; dropDuck?: number; // the chorus: from `drop` the bed under the voice sits at `dropDuck`
+    dips?: { from: number; to: number; level: number }[]; // short dips, e.g. a breath before the CTA
+    fadeOut?: number; // seconds, default 1
+  };
   grade: { contrast: number; saturate: number; brightness: number; vignette: number };
   fx: Fx[];
 };

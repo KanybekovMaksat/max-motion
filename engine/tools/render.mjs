@@ -24,19 +24,22 @@ const safeArg = argv.includes("--safe") ? argv[argv.indexOf("--safe") + 1] : und
 const safe = argv.includes("--safe") ? (PLATFORMS.includes(safeArg) ? safeArg : "all") : undefined;
 if (safeArg && !safeArg.startsWith("--") && !PLATFORMS.includes(safeArg)) throw new Error(`--safe ${safeArg}: use reels, tiktok, shorts or all`);
 const tag = safe ? (safe === "all" ? "-safe" : `-safe-${safe}`) : "";
-const props = JSON.stringify(safe ? { slug, safe } : { slug });
+// --variant B renders public/<slug>/edit.B.json → out/<slug>-B.mp4 (side-by-side versions to choose from)
+const variant = argv.includes("--variant") ? argv[argv.indexOf("--variant") + 1] : null;
+const vtag = variant ? `-${variant}` : "";
+const props = JSON.stringify({ slug, ...(safe ? { safe } : {}), ...(variant ? { editFile: `edit.${variant}.json` } : {}) });
 fs.mkdirSync(path.join(ROOT, "out"), { recursive: true });
 
 if (argv.includes("--still")) {
   const sec = Number(argv[argv.indexOf("--still") + 1]);
   const comp = argv.includes("--comp") ? argv[argv.indexOf("--comp") + 1] : "ProEdit";
-  const out = `out/${slug}-${comp === "ProEdit" ? "" : comp + "-"}${sec}s${tag}.png`;
+  const out = `out/${slug}${vtag}-${comp === "ProEdit" ? "" : comp + "-"}${sec}s${tag}.png`;
   rem(["still", "src/index.ts", comp, out, `--props=${props}`, `--frame=${Math.round(sec * 30)}`]);
   console.log(`→ ${path.join(ROOT, out)}`);
   process.exit(0);
 }
 
-const out = path.join("out", `${slug}${tag}.mp4`);
+const out = path.join("out", `${slug}${vtag}${tag}.mp4`);
 voiceLufs(slug); // measured once into meta.json: sounds and music are levelled to the voice
 rem(["render", "src/index.ts", "ProEdit", out, `--props=${props}`, "--codec=h264", "--crf=17", "--concurrency=4", "--timeout=180000"]);
 master(path.join(ROOT, out));

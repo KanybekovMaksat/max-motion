@@ -41,7 +41,9 @@
 | `whip` | camera | `dir?` 1/-1 | 0.1 s before a broll or scene change, `dur` 0.2 |
 | `outline` | between room and person | `style?` neon/sticker/rim, `color?` | обводка: hook, punch line, around popping photos |
 | `title` | over all | `text`, `kicker?`, `kickerStyle?` caps/serif, `path?` ["1A","1B"], `bg?` | перебивка: a new thought, a step list, a big claim |
-| `sfx` | audio | `name` (library: whoosh-1…4, whoosh-big/-sharp/-camera/-click/-chimes, riser, riser-short, riser-metal, impact-1/-2/-bell, hit-1…4, click-1…3, click-crispy, beep-1…3, ui-1…4, build-1/2, pop-1…4, notify, type, counter, toggle, zoom, transform-1/2, rubber, blur-out, hud, tech, success), `volume?` | extra hits |
+| `sfx` | audio | `name`, `volume?`, `peak?` (its loudest point lands on `at`). Library (`sounds/CATALOG.md`; whole pack as `pack/<slug>`): whoosh-1…4, whoosh-big/-sharp/-camera/-click/-chimes, riser, riser-short, riser-metal, impact-1/-2/-bell, hit-1…4, click-1…3, click-crispy, beep-1…3, ui-1…4, build-1/2, pop-1…4, notify, type, counter, toggle, zoom, transform-1/2, rubber, blur-out, hud, tech, success | hand-placed accents |
+
+Any effect takes `sound: true|false` to force its sound on/off; `card` takes `accent: true` (offer fact → pop), `whip` takes `section: true` (new part → whoosh).
 
 Layout slots — all inside the safe zone of `platform` (`engine/src/safe-zones.json`; `all` = x 60–888, y 220–1436), placed by the engine, not by hand:
 - top third: `behind` word (on the head, never above the safe top), `film`
