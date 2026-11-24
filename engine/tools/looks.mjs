@@ -7,7 +7,7 @@ export const LOOKS = {
   sell: {
     label: "Продажа / оффер",
     accent: "#3B82F6",
-    captionStyle: "pill",
+    captionStyle: "mix",
     behindFont: "sans",
     grade: { contrast: 1.1, saturate: 1.05, brightness: 0.98, vignette: 0.55 },
     gap: 1.1, // seconds between beats
@@ -21,7 +21,7 @@ export const LOOKS = {
   brand: {
     label: "Личный бренд",
     accent: "#B8F02A",
-    captionStyle: "pill",
+    captionStyle: "mix",
     behindFont: "sans",
     grade: { contrast: 1.04, saturate: 0.92, brightness: 1.04, vignette: 0.35 },
     gap: 1.2,
@@ -35,7 +35,7 @@ export const LOOKS = {
   podcast: {
     label: "Подкаст / эксперт",
     accent: "#6E8BFF",
-    captionStyle: "serif",
+    captionStyle: "mix",
     behindFont: "serif",
     grade: { contrast: 1.12, saturate: 0.92, brightness: 0.94, vignette: 0.68 },
     gap: 1.4,
@@ -49,7 +49,7 @@ export const LOOKS = {
   hype: {
     label: "Новости / хайп",
     accent: "#FF3D57",
-    captionStyle: "word",
+    captionStyle: "mix",
     behindFont: "cond",
     grade: { contrast: 1.16, saturate: 1.12, brightness: 0.97, vignette: 0.5 },
     gap: 0.85,
@@ -77,7 +77,7 @@ export const LOOKS = {
   luxury: {
     label: "Премиум",
     accent: "#D4AF37",
-    captionStyle: "serif",
+    captionStyle: "mix",
     behindFont: "serif",
     grade: { contrast: 1.1, saturate: 0.85, brightness: 0.95, vignette: 0.7 },
     gap: 1.6,

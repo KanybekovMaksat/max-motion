@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, CalculateMetadataFunction, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { SANS } from "./fonts";
 import { Backlight, Behind, Broll, Card, Film, Grain, Halo, Orbit, Pop, Quote, Rays, Ribbon, Search } from "./fx";
 import { Chart, Chat, Checklist, CleanCaptions, Counter, Particles, Progress, SerifCaptions, Title, WordCaptions } from "./fx2";
+import { CaptionBack, MixCaptions, captionPlan } from "./captions";
+import { SafeOverlay, SafeProvider, useSafe, zoneOf, type Platform } from "./safe";
 import { envelope, pop } from "./time";
 import type { Edit, Fx, Head, Meta, Word } from "./types";
 
-export type ProEditData = { slug: string; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[] };
+// `safe` draws the app UI of that platform over the video (preview only, never in the final render)
+export type ProEditData = { slug: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[] };
 
 export const calcProEdit: CalculateMetadataFunction<ProEditData> = async ({ props }) => {
   const get = async <T,>(f: string): Promise<T> => (await fetch(staticFile(`${props.slug}/${f}`))).json();
@@ -158,9 +161,10 @@ const Captions: React.FC<{ words: Word[]; accent: string }> = ({ words, accent }
   const p = pop(frame, fps, Math.round(c[0].s * fps) - 1, 14, 220);
   // shrink long chunks so they stay inside ~960px
   const chars = c.reduce((a, w) => a + w.w.length + 1, 0);
-  const size = Math.min(66, Math.round(960 / (chars * 0.6)));
+  const S = useSafe();
+  const size = Math.min(66, Math.round((1040 - S.left - S.right) / (chars * 0.6)));
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 300 }}>
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: S.bottom + 40, paddingLeft: S.left, paddingRight: S.right }}>
       <div style={{ display: "flex", gap: 18, transform: `translateY(${(1 - p) * 30}px) scale(${0.9 + 0.1 * p})`, opacity: p }}>
         {c.map((w, i) => {
           const on = t >= w.s - 0.03;
@@ -189,7 +193,8 @@ const Captions: React.FC<{ words: Word[]; accent: string }> = ({ words, accent }
   );
 };
 
-const CaptionLayer: React.FC<{ style: NonNullable<Edit["captionStyle"]>; words: Word[]; accent: string }> = ({ style, words, accent }) => {
+const CaptionLayer: React.FC<{ style: NonNullable<Edit["captionStyle"]>; words: Word[]; accent: string; plan: ReturnType<typeof captionPlan> }> = ({ style, words, accent, plan }) => {
+  if (style === "mix") return <MixCaptions plan={plan} accent={accent} />;
   if (style === "serif") return <SerifCaptions words={words} />;
   if (style === "word") return <WordCaptions words={words} accent={accent} />;
   if (style === "clean") return <CleanCaptions words={words} accent={accent} />;
@@ -224,10 +229,13 @@ const Outline: React.FC<{ edit: Edit; slug: string }> = ({ edit, slug }) => {
   );
 };
 
-export const ProEdit: React.FC<ProEditData> = ({ slug, meta, edit, words, track }) => {
+export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, track }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const plan = useMemo(() => (edit && words ? captionPlan(words, edit) : []), [edit, words]);
   if (!meta || !edit || !words || !track) return null;
+  const style = edit.captionStyle ?? "mix";
+  const mix = edit.captions && style === "mix";
   const h = headAt(track, frame);
   const cam = camera(edit, frame, fps);
   const g = edit.grade;
@@ -238,23 +246,27 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, meta, edit, words, track 
     filter: cam.blur > 0.5 ? `blur(${cam.blur}px)` : undefined,
   };
   return (
+    <SafeProvider value={{ zone: zoneOf(edit.platform), captions: edit.captions }}>
     <AbsoluteFill style={{ background: "#000" }}>
       <AbsoluteFill style={scene}>
         <AbsoluteFill style={{ filter: grade }}>
           <OffthreadVideo src={staticFile(`${slug}/base.mp4`)} />
         </AbsoluteFill>
         <Layer edit={edit} meta={meta} track={track} side="back" />
+        {mix ? <CaptionBack plan={plan} accent={edit.accent} head={(f) => headAt(track, f)} /> : null}
         <Outline edit={edit} slug={slug} />
         <AbsoluteFill style={{ filter: grade }}>
           <OffthreadVideo src={staticFile(`${slug}/fg.webm`)} transparent muted />
         </AbsoluteFill>
       </AbsoluteFill>
       <Layer edit={edit} meta={meta} track={track} side="front" />
-      {edit.captions ? <CaptionLayer style={edit.captionStyle ?? "pill"} words={words} accent={edit.accent} /> : null}
+      {edit.captions ? <CaptionLayer style={style} words={words} accent={edit.accent} plan={plan} /> : null}
       <Layer edit={edit} meta={meta} track={track} side="over" />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,${g.vignette}) 100%)`, pointerEvents: "none" }} />
       <Grain />
       <Sounds edit={edit} />
+      {safe ? <SafeOverlay platform={safe} /> : null}
     </AbsoluteFill>
+    </SafeProvider>
   );
 };

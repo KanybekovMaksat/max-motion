@@ -1,0 +1,7 @@
+{
+  "_note": "Areas covered by the app UI on a 1080×1920 reel, in px from each edge (organic feed, Nov 2026). `rail` = the like/comment/share column: x from rail.x to the right edge, y from rail.top to rail.bottom. `all` = the union of the three: keep captions and cards inside it when one reel goes everywhere. Sources: TikTok Ads Manager overlay (130/484/44/140), Meta Reels guide (top ~14%, sides ~6%), Google Shorts template (right 192), organic checks from vidova.ai, creatora.be, cadenus.io.",
+  "reels":  { "label": "Instagram Reels",  "top": 220, "bottom": 420, "left": 60, "right": 150, "rail": { "x": 930, "top": 1060, "bottom": 1720 } },
+  "tiktok": { "label": "TikTok",           "top": 130, "bottom": 484, "left": 44, "right": 140, "rail": { "x": 940, "top": 840,  "bottom": 1660 } },
+  "shorts": { "label": "YouTube Shorts",   "top": 160, "bottom": 420, "left": 48, "right": 192, "rail": { "x": 888, "top": 900,  "bottom": 1700 } },
+  "all":    { "label": "Reels + TikTok + Shorts", "top": 220, "bottom": 484, "left": 60, "right": 192, "rail": { "x": 888, "top": 840, "bottom": 1720 } }
+}

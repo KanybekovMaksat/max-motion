@@ -3,8 +3,10 @@
 #   mm doctor                         check / install everything (idempotent)
 #   mm prep <video> <slug> [--lang ru|en|auto] [--cut]
 #   mm plan <slug> [--goal "..."] [--look sell|brand|podcast|hype|calm|luxury] [--accent #hex] [--force]
-#   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult]
-#   mm render <slug> [--wrap showcase,chat,prompt|all]
+#   mm plan … [--platform reels|tiktok|shorts|all]   keep captions/cards out of that app's UI (default all)
+#   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult] [--safe [reels|tiktok|shorts|all]]
+#   mm render <slug> [--wrap showcase,chat,prompt|all] [--safe [platform]]   --safe = preview with the app UI on top
+#   mm safezones                      export the safe-zone templates (transparent PNG) to <workspace>/out/safe-zones/
 #   mm looks                          list looks
 #   mm studio                         open Remotion Studio
 #   mm home                           print the workspace path
@@ -62,7 +64,10 @@ case "$cmd" in
   plan) setup; cd "$WS" && node tools/plan.mjs "$@" ;;
   still) setup; slug="$1"; sec="$2"; shift 2; cd "$WS" && node tools/render.mjs "$slug" --still "$sec" "$@" ;;
   render) setup; cd "$WS" && node tools/render.mjs "$@" ;;
+  safezones) setup; cd "$WS" && mkdir -p out/safe-zones && for p in reels tiktok shorts all; do
+      npx remotion still src/index.ts SafeZone "out/safe-zones/$p.png" --props="{\"platform\":\"$p\"}" --image-format=png >/dev/null 2>&1 && echo "→ $WS/out/safe-zones/$p.png"
+    done ;;
   studio) setup; cd "$WS" && npx remotion studio src/index.ts ;;
   test) setup; cd "$WS" && node --test tools/*.test.mjs ;;
-  *) sed -n '2,12p' "$0" ;;
+  *) sed -n '2,15p' "$0" ;;
 esac

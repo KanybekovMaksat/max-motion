@@ -1,5 +1,7 @@
 // Render the finished edit, and optionally the wrapper reels around it.
-// usage: npm run render -- <slug> [--wrap showcase,chat,prompt | --wrap all] [--still 2.5]
+// usage: npm run render -- <slug> [--wrap showcase,chat,prompt | --wrap all] [--still 2.5] [--safe [reels|tiktok|shorts|all]]
+// --safe draws that app's UI and the safe box over the edit: a preview to check nothing hides under
+// the caption, the buttons or the top bar (→ <slug>-safe.mp4 / <slug>-<sec>s-safe.png).
 // Wrapper texts live in public/<slug>/wrap.json: shared fields at the top level,
 // per-wrapper ones under "wrappers": { "showcase": {…}, "chat": {…}, "prompt": {…} }.
 import { execFileSync } from "node:child_process";
@@ -15,19 +17,25 @@ if (!slug) {
   process.exit(1);
 }
 const rem = (args) => execFileSync("npx", ["remotion", ...args], { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] });
-const props = JSON.stringify({ slug });
+// --safe with no platform (or followed by another flag) = "all"
+const PLATFORMS = ["reels", "tiktok", "shorts", "all"];
+const safeArg = argv.includes("--safe") ? argv[argv.indexOf("--safe") + 1] : undefined;
+const safe = argv.includes("--safe") ? (PLATFORMS.includes(safeArg) ? safeArg : "all") : undefined;
+if (safeArg && !safeArg.startsWith("--") && !PLATFORMS.includes(safeArg)) throw new Error(`--safe ${safeArg}: use reels, tiktok, shorts or all`);
+const tag = safe ? (safe === "all" ? "-safe" : `-safe-${safe}`) : "";
+const props = JSON.stringify(safe ? { slug, safe } : { slug });
 fs.mkdirSync(path.join(ROOT, "out"), { recursive: true });
 
 if (argv.includes("--still")) {
   const sec = Number(argv[argv.indexOf("--still") + 1]);
   const comp = argv.includes("--comp") ? argv[argv.indexOf("--comp") + 1] : "ProEdit";
-  const out = `out/${slug}-${comp === "ProEdit" ? "" : comp + "-"}${sec}s.png`;
+  const out = `out/${slug}-${comp === "ProEdit" ? "" : comp + "-"}${sec}s${tag}.png`;
   rem(["still", "src/index.ts", comp, out, `--props=${props}`, `--frame=${Math.round(sec * 30)}`]);
   console.log(`→ ${path.join(ROOT, out)}`);
   process.exit(0);
 }
 
-const out = path.join("out", `${slug}.mp4`);
+const out = path.join("out", `${slug}${tag}.mp4`);
 rem(["render", "src/index.ts", "ProEdit", out, `--props=${props}`, "--codec=h264", "--crf=17", "--concurrency=4", "--timeout=180000"]);
 console.log(`→ ${path.join(ROOT, out)}`);
 
@@ -35,6 +43,7 @@ console.log(`→ ${path.join(ROOT, out)}`);
 let wraps = argv.includes("--wrap") ? argv[argv.indexOf("--wrap") + 1].split(",") : argv.includes("--showcase") ? ["showcase"] : [];
 if (wraps.includes("all")) wraps = ["showcase", "chat", "prompt"];
 const COMP = { showcase: "Showcase", chat: "ClaudeChat", prompt: "PromptResult" };
+if (wraps.length && safe) throw new Error("--safe is a preview; render the wrappers without it");
 if (wraps.length) {
   fs.copyFileSync(path.join(ROOT, out), path.join(ROOT, "public", slug, "after.mp4"));
   const wrapFile = path.join(ROOT, "public", slug, "wrap.json");

@@ -3,6 +3,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { COND, SANS, SERIF } from "./fonts";
+import { useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
 import type { Face, Fx, Head, Word } from "./types";
 
@@ -18,6 +19,7 @@ const glass: React.CSSProperties = {
 // ── COUNTER: "TOTAL LISTINGS 165" counting up, bottom left ────────────────────
 export const Counter: React.FC<P<"counter">> = ({ fx, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const p = pop(f, fps, 0, 15, 170);
   const o = envelope(f, 0, len, 3, 7);
@@ -25,7 +27,7 @@ export const Counter: React.FC<P<"counter">> = ({ fx, len }) => {
   const n = Math.round((fx.from ?? 0) + (fx.to - (fx.from ?? 0)) * k);
   return (
     <AbsoluteFill style={{ opacity: o }}>
-      <div style={{ position: "absolute", left: 90, top: 1170, transform: `translateY(${(1 - p) * 60}px)` }}>
+      <div style={{ position: "absolute", left: slot.left, bottom: slot.bottom, transform: `translateY(${(1 - p) * 60}px)` }}>
         <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 30, letterSpacing: 3, color: "rgba(255,255,255,.9)", textTransform: "uppercase" }}>{fx.label}</div>
         <div style={{ fontFamily: COND, fontWeight: 600, fontSize: 210, lineHeight: 0.95, color: "#fff", letterSpacing: -2, fontVariantNumeric: "tabular-nums", textShadow: "0 8px 40px rgba(0,0,0,.45)" }}>
           {fx.prefix ?? ""}
@@ -40,12 +42,13 @@ export const Counter: React.FC<P<"counter">> = ({ fx, len }) => {
 // ── CHECKLIST: pills tick in one after another ───────────────────────────────
 export const Checklist: React.FC<P<"checklist">> = ({ fx, accent, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const o = envelope(f, 0, len, 2, 7);
   const gap = Math.max(5, Math.min(10, Math.floor((len - 10) / Math.max(1, fx.items.length))));
   return (
     <AbsoluteFill style={{ opacity: o }}>
-      <div style={{ position: "absolute", left: 90, top: 1150, display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ position: "absolute", left: slot.left, bottom: slot.bottom, display: "flex", flexDirection: "column", gap: 16 }}>
         {fx.items.map((it, i) => {
           const p = pop(f, fps, i * gap, 14, 200);
           const tick = pop(f, fps, i * gap + 5, 10, 300);
@@ -68,13 +71,14 @@ export const Checklist: React.FC<P<"checklist">> = ({ fx, accent, len }) => {
 // ── CHAT: typing dots, then the bubble ───────────────────────────────────────
 export const Chat: React.FC<P<"chat">> = ({ fx, accent, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const p = pop(f, fps, 0, 14, 180);
   const o = envelope(f, 0, len, 2, 7);
   const typing = f < 12;
   return (
     <AbsoluteFill style={{ opacity: o }}>
-      <div style={{ position: "absolute", left: 80, right: 160, top: 1180, display: "flex", gap: 18, alignItems: "flex-end", transform: `translateY(${(1 - p) * 70}px) scale(${0.9 + 0.1 * p})`, transformOrigin: "0% 100%" }}>
+      <div style={{ position: "absolute", ...slot, display: "flex", gap: 18, alignItems: "flex-end", transform: `translateY(${(1 - p) * 70}px) scale(${0.9 + 0.1 * p})`, transformOrigin: "0% 100%" }}>
         <div style={{ width: 76, height: 76, borderRadius: 99, flex: "none", background: `linear-gradient(135deg, ${accent}, #111)`, boxShadow: "0 10px 30px rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 800, fontSize: 34, color: "#fff" }}>
           {(fx.name ?? "?").slice(0, 1).toUpperCase()}
         </div>
@@ -98,6 +102,7 @@ export const Chat: React.FC<P<"chat">> = ({ fx, accent, len }) => {
 // ── PROGRESS: title + segmented bar filling ──────────────────────────────────
 export const Progress: React.FC<P<"progress">> = ({ fx, accent, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const p = pop(f, fps, 0, 14, 170);
   const o = envelope(f, 0, len, 2, 7);
@@ -107,7 +112,7 @@ export const Progress: React.FC<P<"progress">> = ({ fx, accent, len }) => {
   const badge = pop(f, fps, Math.max(8, len - 10), 9, 280);
   return (
     <AbsoluteFill style={{ opacity: o }}>
-      <div style={{ ...glass, position: "absolute", left: 110, right: 110, top: 1180, padding: "28px 34px", transform: `translateY(${(1 - p) * 90}px)` }}>
+      <div style={{ ...glass, position: "absolute", ...slot, padding: "28px 34px", transform: `translateY(${(1 - p) * 90}px)` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 42, color: "#111", letterSpacing: -0.8 }}>{fx.title}</div>
           <div style={{ width: 46, height: 46, borderRadius: 99, background: "#22C55E", transform: `scale(${done ? badge : 0})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -227,6 +232,7 @@ export const keyIndex = (ph: Word[]) => ph.reduce((b, w, i) => (clean(w.w).lengt
 export const SerifCaptions: React.FC<{ words: Word[] }> = ({ words }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const S = useSafe();
   const t = frame / fps;
   const all = phrases(words);
   const idx = all.findIndex((c, i) => t >= c[0].s - 0.05 && t < (all[i + 1]?.[0].s ?? c[c.length - 1].e + 0.7) - 0.05);
@@ -234,8 +240,8 @@ export const SerifCaptions: React.FC<{ words: Word[] }> = ({ words }) => {
   const ph = all[idx];
   const k = keyIndex(ph);
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 290 }}>
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "baseline", columnGap: 16, maxWidth: 940 }}>
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: S.bottom + 40, paddingLeft: S.left, paddingRight: S.right }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "baseline", columnGap: 16, maxWidth: "100%" }}>
         {ph.map((w, i) => {
           const p = pop(frame, fps, Math.round(w.s * fps) - 2, 15, 210);
           const em = i === k;
@@ -271,6 +277,7 @@ const METAL = "linear-gradient(180deg, #ffffff 0%, #dfe3e9 36%, #858b95 52%, #ee
 
 export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
   const f = useCurrentFrame();
+  const S = useSafe();
   const { fps } = useVideoConfig();
   const inP = interpolate(f, [0, 6], [1, 0], { extrapolateRight: "clamp", easing: ease });
   const outP = interpolate(f, [len - 5, len], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -327,7 +334,7 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
         <svg width={1080} height={1920} style={{ position: "absolute", inset: 0 }}>
           {(() => {
             const n = fx.path!.length;
-            const pts = fx.path!.map((_, i) => [620 - Math.sin(i * 1.3) * 140, 1060 + (i * 520) / Math.max(1, n - 1)]);
+            const pts = fx.path!.map((_, i) => [600 - Math.sin(i * 1.3) * 140, 1000 + (i * (1920 - S.bottom - 1060)) / Math.max(1, n - 1)]);
             const d = pts.map((q, i) => (i ? `S ${q[0] + 120} ${q[1] - 160} ${q[0]} ${q[1]}` : `M ${q[0]} ${q[1]}`)).join(" ");
             const draw = interpolate(f, [4, Math.max(6, len * 0.75)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             return (
@@ -349,7 +356,7 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
           })()}
         </svg>
       ) : (
-        <div style={{ position: "absolute", left: 528, top: 1480, width: 24, height: 24, borderRadius: 99, background: dot, boxShadow: `0 0 30px 8px ${dot}`, opacity: 0.6 + 0.4 * Math.sin(f / 4) }} />
+        <div style={{ position: "absolute", left: 528, top: 1920 - S.bottom - 140, width: 24, height: 24, borderRadius: 99, background: dot, boxShadow: `0 0 30px 8px ${dot}`, opacity: 0.6 + 0.4 * Math.sin(f / 4) }} />
       )}
     </AbsoluteFill>
   );
@@ -359,15 +366,16 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
 export const WordCaptions: React.FC<{ words: Word[]; accent: string }> = ({ words, accent }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const S = useSafe();
   const t = frame / fps;
   const i = words.findIndex((w, j) => t >= w.s - 0.04 && t < (words[j + 1]?.s ?? w.e + 0.5) - 0.04);
   if (i < 0) return null;
   const w = clean(words[i].w).toUpperCase();
   const p = pop(frame, fps, Math.round(words[i].s * fps) - 1, 10, 320);
   const key = w.length >= 6;
-  const size = Math.min(190, Math.round(960 / (Math.max(3, w.length) * 0.6)));
+  const size = Math.min(190, Math.round((1040 - S.left - S.right) / (Math.max(3, w.length) * 0.6)));
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 300 }}>
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: S.bottom + 40, paddingLeft: S.left, paddingRight: S.right }}>
       <div
         style={{
           fontFamily: COND,
@@ -393,6 +401,7 @@ export const WordCaptions: React.FC<{ words: Word[]; accent: string }> = ({ word
 export const CleanCaptions: React.FC<{ words: Word[]; accent: string }> = ({ words, accent }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const S = useSafe();
   const t = frame / fps;
   const all = phrases(words);
   const idx = all.findIndex((c, i) => t >= c[0].s - 0.05 && t < (all[i + 1]?.[0].s ?? c[c.length - 1].e + 0.8) - 0.05);
@@ -400,8 +409,8 @@ export const CleanCaptions: React.FC<{ words: Word[]; accent: string }> = ({ wor
   const ph = all[idx];
   const o = clamp01((frame - (ph[0].s * fps - 3)) / 5);
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 280 }}>
-      <div style={{ maxWidth: 940, padding: "18px 30px", borderRadius: 20, background: "rgba(0,0,0,.42)", backdropFilter: "blur(10px)", opacity: o, display: "flex", flexWrap: "wrap", justifyContent: "center", columnGap: 14, rowGap: 6 }}>
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: S.bottom + 40, paddingLeft: S.left, paddingRight: S.right }}>
+      <div style={{ maxWidth: "100%", padding: "18px 30px", borderRadius: 20, background: "rgba(0,0,0,.42)", backdropFilter: "blur(10px)", opacity: o, display: "flex", flexWrap: "wrap", justifyContent: "center", columnGap: 14, rowGap: 6 }}>
         {ph.map((w, i) => {
           const now = t >= w.s - 0.03 && t < w.e + 0.05;
           const u = now ? clamp01((t - w.s + 0.03) / Math.max(0.08, w.e - w.s)) : t >= w.e ? 1 : 0;

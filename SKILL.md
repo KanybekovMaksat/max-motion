@@ -22,7 +22,7 @@ Read before directing an edit:
 3. **Direct** — follow `references/direction.md`: read energy and content, pick the look, then
    `mm plan <slug> --goal "<goal in words>"` (or `--look <name>`, `--accent #hex`). The plan is a draft from the look + content rules; rewrite `edit.json` by meaning: right word behind the head, numbers → counters, lists → checklists, one front card at a time, nothing over the face. Never `--force` over an edit you already tuned.
    Photos for `pop` / `film` / `card` / `broll`: put the user's real images or clips in `~/max-motion/public/assets/` and reference them as `assets/<file>`. No photos → the plan skips those effects.
-4. **Check** — `mm still <slug> <sec>` at the hook, 3–4 beats and the end; read the PNGs (`~/max-motion/out/`), fix overlaps, clipped words, faces covered.
+4. **Check** — `mm still <slug> <sec>` at the hook, 3–4 beats and the end; read the PNGs (`~/max-motion/out/`), fix overlaps, clipped words, faces covered. Then the same seconds with `--safe` (app UI drawn on top): nothing readable may sit under the description, the buttons or the top bar. `mm render <slug> --safe` gives a whole preview video with the overlay.
 5. **Render** — `mm render <slug>` → `~/max-motion/out/<slug>.mp4`. Wrapper reels: `--wrap all` (or `showcase,chat,prompt`), texts in `public/<slug>/wrap.json` (shared fields on top, per-wrapper under `"wrappers"`, see `engine/examples/teen-max/wrap.json`).
 6. **Hand over** — copy the mp4s next to the user's source video, show a stills strip and one table: beat time → what the speaker says → effect. Name the look and why it fits the goal.
 
@@ -41,4 +41,5 @@ Read before directing an edit:
 - `public/<slug>` files must be real files, not symlinks (Remotion drops symlinks) — copy with `cp -c`.
 - No speech → the plan is empty; direct it from the picture.
 - Live preview while tuning: `mm studio`.
+- Safe zones (Reels / TikTok / Shorts, 1080×1920) live in `engine/src/safe-zones.json`; transparent overlay PNGs in `assets/safe-zones/` (re-export with `mm safezones`).
 - Instagram references: single reel links download with `yt-dlp`; profile pages need a login.

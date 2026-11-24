@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import { keyWords, planEdit } from "./plan.mjs";
 import { cropFor, facePx, parseWords } from "./prep.mjs";
@@ -100,4 +101,20 @@ test("every look plans a valid edit with its own caption style and colour", () =
     assert.ok(!e.fx.some((f) => ["pop", "film", "broll"].includes(f.type)), look);
     if (!LOOKS[look].shakeEvery) assert.ok(!e.fx.some((f) => f.type === "shake"), `${look} must not shake`);
   }
+});
+
+test("plan keeps the reel inside the safe zone of every platform by default", () => {
+  const e = planEdit({ slug: "t", words, duration: 6 });
+  assert.equal(e.platform, "all");
+  assert.equal(planEdit({ slug: "t", words, duration: 6, platform: "tiktok" }).platform, "tiktok");
+});
+
+test("safe zones: the union covers each platform and leaves a usable box", () => {
+  const Z = JSON.parse(fs.readFileSync(new URL("../src/safe-zones.json", import.meta.url), "utf8"));
+  for (const p of ["reels", "tiktok", "shorts"]) {
+    for (const k of ["top", "bottom", "left", "right"]) assert.ok(Z.all[k] >= Z[p][k], `all.${k} < ${p}.${k}`);
+    assert.ok(Z.all.rail.x <= Z[p].rail.x);
+  }
+  assert.ok(1080 - Z.all.left - Z.all.right >= 800);
+  assert.ok(1920 - Z.all.top - Z.all.bottom >= 1150);
 });

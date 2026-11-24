@@ -79,7 +79,15 @@ export type Edit = {
   // serif = phrase slides up, the key word in big serif italic (podcast, premium)
   // word  = one huge condensed word at a time, accent on key words (hype, news)
   // clean = one readable line on a soft strip, the spoken word underlined (teaching, parents)
-  captionStyle?: "pill" | "serif" | "word" | "clean";
+  // mix   = small sans phrase + key word in serif italic or caps, words blur in / rise / pop / type,
+  //         every ~3rd key word goes behind the person (default)
+  captionStyle?: "mix" | "pill" | "serif" | "word" | "clean";
+  // mix: words that must carry the accent (otherwise numbers, then the longest word)
+  captionKeys?: string[];
+  // mix: false keeps every caption in front of the person
+  captionBehind?: boolean;
+  // where the reel goes: captions and cards stay out of that app's UI ("all" = union of the three)
+  platform?: "reels" | "tiktok" | "shorts" | "all";
   // the look the plan was made with (tools/looks.mjs), for the record
   look?: string;
   // auto sound on every effect (whoosh, pop, tick…) and its overall level
@@ -89,4 +97,4 @@ export type Edit = {
   fx: Fx[];
 };
 
-export type ProEditProps = { slug: string };
+export type ProEditProps = { slug: string; safe?: "reels" | "tiktok" | "shorts" | "all" };

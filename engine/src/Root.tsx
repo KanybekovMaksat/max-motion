@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { ProEdit, calcProEdit } from "./ProEdit";
+import { SafeTemplate } from "./safe";
 import { Showcase, calcShowcase } from "./Showcase";
 import { ClaudeChat, PromptResult, WrapperProps, calcWrapper } from "./Wrappers";
 
@@ -37,6 +38,8 @@ export const Root: React.FC = () => (
         tint: "#3D5BFF",
       }}
     />
+    {/* transparent safe-zone template, one platform per still (`mm safezones`) */}
+    <Composition id="SafeZone" component={SafeTemplate} {...base} durationInFrames={1} defaultProps={{ platform: "all" as const }} />
     <Composition id="ClaudeChat" component={ClaudeChat} calculateMetadata={calcWrapper} {...base} defaultProps={wrapperDefaults} />
     <Composition id="PromptResult" component={PromptResult} calculateMetadata={calcWrapper} {...base} defaultProps={wrapperDefaults} />
   </>

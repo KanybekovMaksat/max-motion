@@ -4,7 +4,10 @@
 {
   "slug": "x", "accent": "#6E8BFF",
   "look": "podcast",                           // which preset the plan used (see direction.md)
-  "captions": true, "captionStyle": "serif",   // "pill" | "serif" | "word" | "clean"
+  "captions": true, "captionStyle": "mix",     // "mix" (default) | "pill" | "serif" | "word" | "clean"
+  "captionKeys": ["1500", "винить"],           // mix: words that must carry the accent (optional)
+  "captionBehind": true,                       // mix: false = no caption word behind the person
+  "platform": "all",                           // safe zone: "reels" | "tiktok" | "shorts" | "all" (union, default)
   "sfx": true, "sfxVolume": 0.7,
   "grade": { "contrast": 1.1, "saturate": 0.95, "brightness": 0.96, "vignette": 0.6 },
   "fx": [ { "type": "...", "at": 1.25, "dur": 0.8, ... } ]
@@ -39,8 +42,9 @@
 | `title` | over all | `text`, `kicker?`, `kickerStyle?` caps/serif, `path?` ["1A","1B"], `bg?` | перебивка: a new thought, a step list, a big claim |
 | `sfx` | audio | `name`, `volume?` | extra hits |
 
-Layout slots (don't stack two in one slot at the same time):
-- top third: `behind` word (on the head), `film`
+Layout slots — all inside the safe zone of `platform` (`engine/src/safe-zones.json`; `all` = x 60–888, y 220–1436), placed by the engine, not by hand:
+- top third: `behind` word (on the head, never above the safe top), `film`
 - sides: `pop` photos, `orbit`
-- lower third y≈1150–1520: `card` / `counter` / `checklist` / `chat` / `progress` / `search` / `quote` — one at a time
-- y≈1550–1650: captions
+- card slot, bottom edge 170 px above the captions: `card` / `counter` / `checklist` / `chat` / `progress` / `search` / `quote` — one at a time
+- captions: bottom of the safe zone (y≈1300–1396 for `all`), centred in the safe box, not in the frame
+- under y≈1436 and right of x≈888 the app draws the description, avatar, sound and buttons — nothing readable goes there

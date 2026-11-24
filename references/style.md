@@ -37,7 +37,7 @@ app card with thumbnail + green ✓ badge ("The house ✓ Sold"), price/offer ca
 
 **Cutaways.** AI B-roll (Gemini/Flow) 0.5–1 s on a concrete noun ("motivation" → runner on stairs, "Nvidia" → glowing chip), entered with a whip blur; a full-screen dark card with a line chart on numbers ("And when *yours* don't").
 
-**Captions.** Not karaoke pills: a short phrase slides up word by word with blur, small sans + the key word in big serif italic ("are going *viral*.", "am I falling *behind?*"). Low third, under the chin.
+**Captions.** Not karaoke pills: a short phrase slides up word by word with blur, small sans + the key word in big serif italic ("are going *viral*.", "am I falling *behind?*"), sometimes the key word in condensed caps or big behind the head — this is `mix`. Low third, under the chin, always above the app caption (safe zone).
 
 **Grade & sound.** Slightly darker, cooler, vignette, fine grain; colour keeps one accent per reel. Every effect has a sound: whoosh on words, pop on cards, tick on checks, impact on shakes, ding on chat, riser into charts.
 

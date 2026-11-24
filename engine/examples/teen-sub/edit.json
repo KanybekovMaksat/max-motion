@@ -1,0 +1,25 @@
+{
+  "slug": "teen-sub",
+  "look": "podcast",
+  "accent": "#6E8BFF",
+  "captions": true,
+  "captionStyle": "mix",
+  "platform": "all",
+  "sfx": true,
+  "sfxVolume": 0.8,
+  "grade": { "contrast": 1.12, "saturate": 0.95, "brightness": 0.95, "vignette": 0.65 },
+  "fx": [
+    { "type": "backlight", "at": 0, "dur": 5.19, "color": "#5B6CFF" },
+    { "type": "particles", "at": 0.3, "dur": 1.2, "shape": "globe" },
+    { "type": "shake", "at": 0.35, "dur": 0.6, "scale": 1.08 },
+    { "type": "punch", "at": 1.33, "dur": 0.6, "scale": 1.12 },
+    { "type": "counter", "at": 1.4, "dur": 1.0, "label": "Выпускников Codify", "to": 1500, "suffix": "+" },
+    { "type": "whip", "at": 2.32, "dur": 0.22, "dir": 1 },
+    { "type": "checklist", "at": 2.42, "dur": 1.0, "items": ["Python", "Роботы", "Свой проект"] },
+    { "type": "behind", "at": 2.68, "dur": 0.8, "text": "будет", "font": "cond" },
+    { "type": "chat", "at": 3.45, "dur": 0.8, "name": "Мама", "text": "Кого винить?" },
+    { "type": "shake", "at": 3.9, "dur": 0.55 },
+    { "type": "outline", "at": 3.9, "dur": 0.8, "style": "rim" },
+    { "type": "chart", "at": 4.75, "dur": 0.44, "label": "Рост", "trend": "up" }
+  ]
+}

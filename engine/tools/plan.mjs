@@ -35,7 +35,7 @@ export function keyWords(words, gap = 1.1, strict = true) {
 const r2 = (n) => Math.round(n * 100) / 100;
 const bare = (w) => w.replace(/[.,!?…:;«»"]+/g, "");
 
-export function planEdit({ slug, words, duration, images = [], icons = ["instagram", "tiktok", "youtube", "telegram"], look = "sell", accent }) {
+export function planEdit({ slug, words, duration, images = [], icons = ["instagram", "tiktok", "youtube", "telegram"], look = "sell", accent, platform = "all" }) {
   const L = LOOKS[look] ?? LOOKS.sell;
   // filler-heavy speech gives too few beats; then any 4+ letter word may carry an effect
   let keys = keyWords(words, L.gap);
@@ -112,6 +112,7 @@ export function planEdit({ slug, words, duration, images = [], icons = ["instagr
     accent: accent ?? L.accent,
     captions: true,
     captionStyle: L.captionStyle,
+    platform,
     sfx: true,
     sfxVolume: L.sfx,
     grade: L.grade,
@@ -124,7 +125,7 @@ function main() {
   const slug = argv[0];
   const flag = (n, d) => (argv.includes(n) ? argv[argv.indexOf(n) + 1] : d);
   if (!slug) {
-    console.error('usage: npm run plan -- <slug> [--look sell|brand|podcast|hype|calm|luxury | --goal "..."] [--accent #hex] [--force]');
+    console.error('usage: npm run plan -- <slug> [--look sell|brand|podcast|hype|calm|luxury | --goal "..."] [--accent #hex] [--platform reels|tiktok|shorts|all] [--force]');
     process.exit(1);
   }
   const dir = path.join(ROOT, "public", slug);
@@ -139,7 +140,8 @@ function main() {
   const images = fs.existsSync(adir) ? fs.readdirSync(adir).filter((f) => /\.(jpe?g|png|webp)$/i.test(f)).sort().map((f) => `assets/${f}`) : [];
   const look = flag("--look", null) ?? pickLook(flag("--goal", ""));
   if (!LOOKS[look]) throw new Error(`unknown look "${look}" — ${Object.keys(LOOKS).join(", ")}`);
-  const edit = planEdit({ slug, words, duration: meta.duration, images, look, accent: flag("--accent", undefined) });
+  const edit = planEdit({ slug, words, duration: meta.duration, images, look, accent: flag("--accent", undefined), platform: flag("--platform", "all") });
+  if (!["reels", "tiktok", "shorts", "all"].includes(edit.platform)) throw new Error(`unknown platform "${edit.platform}" — reels, tiktok, shorts or all`);
   fs.writeFileSync(file, JSON.stringify(edit, null, 2));
   console.log(`edit.json: look "${look}" (${LOOKS[look].label}), ${edit.fx.length} effects`);
   for (const f of edit.fx) console.log(`  ${f.at.toFixed(2)}s  ${f.type.padEnd(9)} ${f.text ?? f.title ?? ""}`);

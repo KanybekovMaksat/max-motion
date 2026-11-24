@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, random, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COND, SANS, SERIF } from "./fonts";
 import { AppIcon } from "./icons";
+import { useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
 import type { Face, Fx, Head } from "./types";
 
@@ -20,7 +21,8 @@ export const Behind: React.FC<P<"behind">> = ({ fx, accent, len, head }) => {
   const text = font === "cond" ? fx.text.toUpperCase() : fx.text;
   // glyph width per em: Inter 800 ≈ 0.7 (Cyrillic), Playfair italic ≈ 0.68, Oswald caps (Cyrillic) ≈ 0.6; keep the word inside ~900px
   const em = font === "cond" ? 0.6 : font === "serif" ? 0.68 : 0.7;
-  const size = Math.min(font === "sans" ? 300 : 340, Math.round(900 / (Math.max(3, text.length) * em)));
+  const S = useSafe();
+  const size = Math.min(font === "sans" ? 300 : 340, Math.round((1060 - S.left - S.right) / (Math.max(3, text.length) * em)));
   // serif and condensed words are white-metal, like "Sold" / "DEGREE" (unless given a colour); sans words take the accent
   const fill =
     font === "sans" || fx.color
@@ -32,7 +34,7 @@ export const Behind: React.FC<P<"behind">> = ({ fx, accent, len, head }) => {
   const out = interpolate(f, [len - 7, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ alignItems: "center" }}>
-      <div style={{ position: "absolute", top: y - size * 0.62, width: "100%", textAlign: "center", opacity: out }}>
+      <div style={{ position: "absolute", top: Math.max(S.top - (fx.kicker ? 0 : size * 0.1), y - size * 0.62), left: S.left, right: S.right, textAlign: "center", opacity: out }}>
         {fx.kicker ? (
           <div
             style={{
@@ -173,6 +175,7 @@ export const Halo: React.FC<P<"halo">> = ({ fx, face: face0, accent, len, head }
 // ── CARD: glass UI card in front ("The house ✓ Sold") ────────────────────────
 export const Card: React.FC<P<"card">> = ({ fx, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const p = pop(f, fps, 0, 14, 160);
   const b = pop(f, fps, 9, 9, 260);
@@ -182,9 +185,7 @@ export const Card: React.FC<P<"card">> = ({ fx, len }) => {
       <div
         style={{
           position: "absolute",
-          left: 120,
-          right: 120,
-          top: 1180,
+          ...slot,
           height: 170,
           borderRadius: 40,
           background: "rgba(255,255,255,.9)",
@@ -337,6 +338,7 @@ export const Film: React.FC<P<"film">> = ({ fx, accent, len, head }) => {
 // ── SEARCH: a search bar that types itself ───────────────────────────────────
 export const Search: React.FC<P<"search">> = ({ fx, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const p = pop(f, fps, 0, 14, 170);
   const o = envelope(f, 0, len, 2, 7);
@@ -349,9 +351,7 @@ export const Search: React.FC<P<"search">> = ({ fx, len }) => {
       <div
         style={{
           position: "absolute",
-          left: 90,
-          right: 90,
-          top: 1200,
+          ...slot,
           height: 132,
           borderRadius: 99,
           background: "#fff",
@@ -380,6 +380,7 @@ export const Search: React.FC<P<"search">> = ({ fx, len }) => {
 // ── BROLL: full-screen cutaway with a whip in/out ────────────────────────────
 export const Broll: React.FC<P<"broll">> = ({ fx, len }) => {
   const f = useCurrentFrame();
+  const S = useSafe();
   const inP = interpolate(f, [0, 7], [1, 0], { extrapolateRight: "clamp", easing: ease });
   const outP = interpolate(f, [len - 6, len], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const x = inP * 1080 - outP * 1080;
@@ -394,7 +395,7 @@ export const Broll: React.FC<P<"broll">> = ({ fx, len }) => {
       )}
       <AbsoluteFill style={{ background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,.75) 100%)" }} />
       {fx.text ? (
-        <div style={{ position: "absolute", left: 60, right: 60, bottom: 330, textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontWeight: 700, fontSize: 110, color: "#fff", lineHeight: 1, opacity: clamp01((f - 4) / 6) }}>
+        <div style={{ position: "absolute", left: S.left, right: S.right, bottom: S.bottom + 40, textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontWeight: 700, fontSize: 110, color: "#fff", lineHeight: 1, opacity: clamp01((f - 4) / 6) }}>
           {fx.text}
         </div>
       ) : null}
@@ -446,6 +447,7 @@ export const Ribbon: React.FC<P<"ribbon"> & { side: "back" | "front" }> = ({ fx,
 // ── QUOTE: a note card with a serif quote typed in ───────────────────────────
 export const Quote: React.FC<P<"quote">> = ({ fx, len }) => {
   const f = useCurrentFrame();
+  const slot = useSlot();
   const { fps } = useVideoConfig();
   const p = pop(f, fps, 0, 13, 150);
   const o = envelope(f, 0, len, 2, 7);
@@ -455,9 +457,7 @@ export const Quote: React.FC<P<"quote">> = ({ fx, len }) => {
       <div
         style={{
           position: "absolute",
-          left: 110,
-          right: 110,
-          top: 1120,
+          ...slot,
           borderRadius: 30,
           background: "#FFFDF6",
           padding: "34px 44px 30px",
