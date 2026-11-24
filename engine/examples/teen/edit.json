@@ -1,0 +1,22 @@
+{
+  "slug": "teen",
+  "accent": "#3B82F6",
+  "captions": true,
+  "grade": { "contrast": 1.1, "saturate": 1.05, "brightness": 0.97, "vignette": 0.6 },
+  "fx": [
+    { "type": "backlight", "at": 0, "dur": 5.85 },
+    { "type": "halo", "at": 0.2, "dur": 1.7 },
+    { "type": "behind", "at": 0.22, "dur": 1.0, "text": "скажу" },
+    { "type": "punch", "at": 0.22, "dur": 0.8, "scale": 1.14 },
+    { "type": "behind", "at": 1.25, "dur": 0.72, "text": "сразу", "kicker": "скажу" },
+    { "type": "pop", "at": 1.97, "dur": 0.85, "images": ["assets/class.jpg", "assets/robots.jpg", "assets/code.jpg", "assets/office.jpg"] },
+    { "type": "orbit", "at": 2.55, "dur": 1.05, "icons": ["instagram", "tiktok", "youtube", "telegram", "claude"] },
+    { "type": "behind", "at": 2.78, "dur": 0.62, "text": "будут" },
+    { "type": "punch", "at": 2.78, "dur": 0.6, "scale": 1.1 },
+    { "type": "film", "at": 3.4, "dur": 0.55, "text": "знают", "images": ["assets/lesson.jpg", "assets/class.jpg", "assets/code.jpg", "assets/robots.jpg"] },
+    { "type": "behind", "at": 3.93, "dur": 0.9, "text": "винить" },
+    { "type": "punch", "at": 3.93, "dur": 0.75, "scale": 1.16 },
+    { "type": "card", "at": 4.1, "dur": 0.75, "title": "Codify", "badge": "Без вины", "image": "assets/facade.jpg" },
+    { "type": "broll", "at": 4.85, "dur": 1.0, "src": "assets/broll-code.mp4", "text": "если что…" }
+  ]
+}

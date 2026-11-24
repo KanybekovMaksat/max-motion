@@ -1,0 +1,25 @@
+{
+  "slug": "teen-max",
+  "accent": "#6E8BFF",
+  "captions": true,
+  "captionStyle": "serif",
+  "sfx": true,
+  "grade": { "contrast": 1.12, "saturate": 0.95, "brightness": 0.95, "vignette": 0.65 },
+  "fx": [
+    { "type": "backlight", "at": 0, "dur": 5.19, "color": "#5B6CFF" },
+    { "type": "particles", "at": 0.3, "dur": 1.2, "shape": "globe" },
+    { "type": "behind", "at": 0.35, "dur": 0.95, "text": "Скажу", "font": "serif" },
+    { "type": "shake", "at": 0.35, "dur": 0.6, "scale": 1.08 },
+    { "type": "behind", "at": 1.33, "dur": 0.7, "text": "сразу", "font": "cond" },
+    { "type": "punch", "at": 1.33, "dur": 0.6, "scale": 1.12 },
+    { "type": "counter", "at": 1.4, "dur": 1.1, "label": "Выпускников Codify", "to": 1500, "suffix": "+" },
+    { "type": "whip", "at": 2.32, "dur": 0.22, "dir": 1 },
+    { "type": "checklist", "at": 2.4, "dur": 1.05, "items": ["Python", "Роботы", "Свой проект"] },
+    { "type": "behind", "at": 2.68, "dur": 0.75, "text": "будет", "font": "sans" },
+    { "type": "chat", "at": 3.45, "dur": 0.8, "name": "Мама", "text": "Кого винить?" },
+    { "type": "progress", "at": 3.95, "dur": 0.75, "title": "Уверенность" },
+    { "type": "shake", "at": 3.9, "dur": 0.55 },
+    { "type": "behind", "at": 3.9, "dur": 0.8, "text": "винить", "font": "serif" },
+    { "type": "chart", "at": 4.7, "dur": 0.49, "label": "Рост", "trend": "up" }
+  ]
+}

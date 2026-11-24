@@ -1,0 +1,18 @@
+{
+  "slug": "teen-lime",
+  "accent": "#B8F02A",
+  "captions": true,
+  "grade": { "contrast": 1.04, "saturate": 0.9, "brightness": 1.04, "vignette": 0.35 },
+  "fx": [
+    { "type": "rays", "at": 0, "dur": 1.9 },
+    { "type": "ribbon", "at": 0.22, "dur": 1.7 },
+    { "type": "behind", "at": 0.22, "dur": 1.0, "text": "скажу", "color": "#B8F02A" },
+    { "type": "punch", "at": 0.22, "dur": 0.8, "scale": 1.12 },
+    { "type": "quote", "at": 1.25, "dur": 1.35, "text": "Скажу сразу.", "author": "студент Codify" },
+    { "type": "film", "at": 2.6, "dur": 0.85, "text": "будут", "images": ["assets/lesson.jpg", "assets/class.jpg", "assets/code.jpg", "assets/robots.jpg"] },
+    { "type": "search", "at": 3.4, "dur": 1.0, "text": "не знают кого винить" },
+    { "type": "behind", "at": 3.93, "dur": 0.9, "text": "винить", "color": "#B8F02A" },
+    { "type": "punch", "at": 3.93, "dur": 0.75, "scale": 1.16 },
+    { "type": "orbit", "at": 4.4, "dur": 1.45, "icons": ["instagram", "tiktok", "youtube", "claude", "python", "js"] }
+  ]
+}

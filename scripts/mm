@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# max-motion runner. Installs itself on first use, then runs the engine.
+#   mm doctor                         check / install everything (idempotent)
+#   mm prep <video> <slug> [--lang ru|en|auto] [--cut]
+#   mm plan <slug> [--goal "..."] [--look sell|brand|podcast|hype|calm|luxury] [--accent #hex] [--force]
+#   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult]
+#   mm render <slug> [--wrap showcase,chat,prompt|all]
+#   mm looks                          list looks
+#   mm studio                         open Remotion Studio
+#   mm home                           print the workspace path
+# Workspace: $MAX_MOTION_HOME (default ~/max-motion). Clips live in <workspace>/public/<slug>/, videos in <workspace>/out/.
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WS="${MAX_MOTION_HOME:-$HOME/max-motion}"
+MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin"
+
+say() { printf '\033[1;35m[max-motion]\033[0m %s\n' "$*" >&2; }
+die() { say "ERROR: $*"; exit 1; }
+
+need_cmd() { # need_cmd <binary> <brew formula>
+  command -v "$1" >/dev/null 2>&1 && return 0
+  command -v brew >/dev/null 2>&1 || die "$1 is missing and Homebrew is not installed. Install Homebrew (https://brew.sh), then rerun."
+  say "installing $2 via Homebrew…"
+  brew install "$2" >&2
+}
+
+setup() {
+  [ "$(uname)" = "Darwin" ] || die "macOS only: the person cutout uses Apple Vision."
+  need_cmd node node
+  need_cmd ffmpeg ffmpeg
+  need_cmd whisper-cli whisper-cpp
+  command -v swiftc >/dev/null 2>&1 || die "swiftc missing — run: xcode-select --install"
+  node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0 : 1)' || die "Node 18+ required"
+
+  mkdir -p "$WS/public" "$WS/out" "$WS/models"
+  # engine code always comes from the skill; clips in public/<slug> are never touched
+  rsync -a "$SKILL_DIR/engine/" "$WS/"
+
+  local stamp="$WS/.deps-stamp" want
+  want="$(shasum "$WS/package-lock.json" | cut -d' ' -f1)"
+  if [ ! -d "$WS/node_modules" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$want" ]; then
+    say "installing node packages (first run ~1 min)…"
+    (cd "$WS" && npm ci --silent --no-audit --no-fund >&2) && echo "$want" > "$stamp"
+  fi
+  if [ ! -x "$WS/tools/matte" ] || [ "$WS/tools/matte.swift" -nt "$WS/tools/matte" ]; then
+    say "building the Apple Vision cutout tool…"
+    swiftc -O "$WS/tools/matte.swift" -o "$WS/tools/matte" >&2
+  fi
+  if [ ! -s "$WS/models/ggml-small.bin" ]; then
+    say "downloading the whisper model (~480 MB, once)…"
+    curl -fL --progress-bar -o "$WS/models/ggml-small.bin.part" "$MODEL_URL" && mv "$WS/models/ggml-small.bin.part" "$WS/models/ggml-small.bin"
+  fi
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  doctor) setup; say "ready → $WS" ;;
+  home) echo "$WS" ;;
+  looks) setup; cd "$WS" && node -e 'import("./tools/looks.mjs").then(m=>{for(const [k,v] of Object.entries(m.LOOKS))console.log(k.padEnd(8),v.accent,v.captionStyle.padEnd(6),"—",v.label)})' ;;
+  prep) setup; cd "$WS" && node tools/prep.mjs "$@" ;;
+  plan) setup; cd "$WS" && node tools/plan.mjs "$@" ;;
+  still) setup; slug="$1"; sec="$2"; shift 2; cd "$WS" && node tools/render.mjs "$slug" --still "$sec" "$@" ;;
+  render) setup; cd "$WS" && node tools/render.mjs "$@" ;;
+  studio) setup; cd "$WS" && npx remotion studio src/index.ts ;;
+  test) setup; cd "$WS" && node --test tools/*.test.mjs ;;
+  *) sed -n '2,12p' "$0" ;;
+esac

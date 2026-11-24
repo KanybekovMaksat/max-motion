@@ -1,0 +1,30 @@
+{
+  "slug": "teen-pro",
+  "accent": "#4F8BFF",
+  "captions": true,
+  "captionStyle": "pill",
+  "sfx": true,
+  "grade": { "contrast": 1.1, "saturate": 1.02, "brightness": 0.96, "vignette": 0.6 },
+  "fx": [
+    { "type": "backlight", "at": 0, "dur": 5.85 },
+    { "type": "outline", "at": 0.2, "dur": 1.05, "style": "neon" },
+    { "type": "halo", "at": 0.2, "dur": 1.05 },
+    { "type": "behind", "at": 0.22, "dur": 1.0, "text": "скажу" },
+    { "type": "punch", "at": 0.22, "dur": 0.8, "scale": 1.14 },
+    { "type": "whip", "at": 1.17, "dur": 0.2 },
+    { "type": "title", "at": 1.25, "dur": 0.75, "kicker": "скажу", "text": "сразу" },
+    { "type": "pop", "at": 2.0, "dur": 0.8, "images": ["assets/class.jpg", "assets/robots.jpg", "assets/code.jpg"] },
+    { "type": "outline", "at": 2.0, "dur": 0.8, "style": "sticker" },
+    { "type": "orbit", "at": 2.55, "dur": 1.05, "icons": ["instagram", "tiktok", "youtube", "telegram", "claude"] },
+    { "type": "ribbon", "at": 2.78, "dur": 0.9, "color": "#4F8BFF" },
+    { "type": "behind", "at": 2.78, "dur": 0.62, "text": "будут" },
+    { "type": "shake", "at": 2.78, "dur": 0.6 },
+    { "type": "film", "at": 3.4, "dur": 0.55, "text": "знают", "images": ["assets/lesson.jpg", "assets/class.jpg", "assets/code.jpg", "assets/robots.jpg"] },
+    { "type": "outline", "at": 3.93, "dur": 0.9, "style": "rim", "color": "#4F8BFF" },
+    { "type": "behind", "at": 3.93, "dur": 0.9, "text": "винить", "font": "cond" },
+    { "type": "punch", "at": 3.93, "dur": 0.75, "scale": 1.16 },
+    { "type": "card", "at": 4.1, "dur": 0.75, "title": "Codify", "badge": "Без вины", "image": "assets/facade.jpg" },
+    { "type": "whip", "at": 4.78, "dur": 0.2, "dir": -1 },
+    { "type": "title", "at": 4.85, "dur": 1.0, "kicker": "путь студента", "kickerStyle": "serif", "text": "если что", "path": ["1A", "1B", "Pro"] }
+  ]
+}

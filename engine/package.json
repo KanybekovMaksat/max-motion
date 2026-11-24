@@ -1,0 +1,25 @@
+{
+  "name": "max-motion-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "max-motion engine: raw talking-head clip in, @eightsenses.media-style edit out (Remotion + Apple Vision + whisper.cpp)",
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "prep": "node tools/prep.mjs",
+    "plan": "node tools/plan.mjs",
+    "render": "node tools/render.mjs",
+    "test": "node --test tools/*.test.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.532",
+    "@remotion/google-fonts": "4.0.532",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
