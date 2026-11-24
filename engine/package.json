@@ -10,7 +10,7 @@
     "plan": "node tools/plan.mjs",
     "render": "node tools/render.mjs",
     "sfx": "node tools/sfx.mjs",
-    "test": "node --test tools/*.test.mjs"
+    "test": "node --experimental-strip-types --test tools/*.test.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.532",

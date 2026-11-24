@@ -20,7 +20,7 @@ export const calcProEdit: CalculateMetadataFunction<ProEditData> = async ({ prop
   return { durationInFrames: Math.floor(meta.duration * meta.fps), fps: meta.fps, width: meta.width, height: meta.height, props: { ...props, meta, edit, words, track, sfx } };
 };
 
-// Layers, bottom → top:  room  ·  back fx  ·  person cutout  ·  front fx  ·  cutaways  ·  grade
+// Layers, bottom → top:  room  ·  back fx  ·  person cutout  ·  front fx  ·  cutaways  ·  vignette  ·  captions
 const BACK = new Set<Fx["type"]>(["backlight", "rays", "halo", "behind", "pop", "film", "particles"]);
 const FRONT = new Set<Fx["type"]>(["card", "search", "quote", "counter", "checklist", "chat", "progress"]);
 const OVER = new Set<Fx["type"]>(["broll", "chart", "title"]);
@@ -215,6 +215,8 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, 
   const cam = camera(edit, frame, fps);
   const g = edit.grade;
   const grade = `contrast(${g.contrast}) saturate(${g.saturate}) brightness(${g.brightness})`;
+  const r = g.room;
+  const room = r ? `${grade} brightness(${1 - (r.dim ?? 0)}) saturate(${1 - (r.desat ?? 0)})${r.blur ? ` blur(${r.blur}px)` : ""}` : grade;
   const scene: React.CSSProperties = {
     transform: `perspective(1400px) translateX(${cam.x}px) rotateX(${cam.rx}deg) rotateY(${cam.ry}deg) rotateZ(${cam.rz}deg) scale(${cam.s})`,
     transformOrigin: `${h.x}px ${h.top + meta.face.h * 0.4}px`,
@@ -224,7 +226,7 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, 
     <SafeProvider value={{ zone: zoneOf(edit.platform), captions: edit.captions }}>
     <AbsoluteFill style={{ background: "#000" }}>
       <AbsoluteFill style={scene}>
-        <AbsoluteFill style={{ filter: grade }}>
+        <AbsoluteFill style={{ filter: room, transform: r?.blur ? "scale(1.02)" : undefined }}>
           <OffthreadVideo src={staticFile(`${slug}/base.mp4`)} />
         </AbsoluteFill>
         <Layer edit={edit} meta={meta} track={track} side="back" />
@@ -235,9 +237,10 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, 
         </AbsoluteFill>
       </AbsoluteFill>
       <Layer edit={edit} meta={meta} track={track} side="front" />
-      {edit.captions ? <CaptionLayer style={style} words={words} accent={edit.accent} plan={plan} /> : null}
       <Layer edit={edit} meta={meta} track={track} side="over" />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,${g.vignette}) 100%)`, pointerEvents: "none" }} />
+      {/* captions over every layer: no card, title card or cutaway can cover them */}
+      {edit.captions ? <CaptionLayer style={style} words={words} accent={edit.accent} plan={plan} /> : null}
       <Grain />
       <Sounds edit={edit} index={sfx ?? {}} gain={voiceGain(meta)} />
       {edit.music ? <Music music={edit.music} words={words} gain={voiceGain(meta)} /> : null}

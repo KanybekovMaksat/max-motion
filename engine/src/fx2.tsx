@@ -1,9 +1,10 @@
 // Effects found in the second pass over @eightsenses.media (26 reels): stat counter, checklist,
 // chat bubble, progress card, dot globe, chart, serif slide-in captions.
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COND, SANS, SERIF } from "./fonts";
-import { useSafe, useSlot } from "./safe";
+import { fitCaption } from "./layout";
+import { CAPTION_H, useKeepOut, useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
 import type { Face, Fx, Head, Word } from "./types";
 
@@ -25,11 +26,14 @@ export const Counter: React.FC<P<"counter">> = ({ fx, len }) => {
   const o = envelope(f, 0, len, 3, 7);
   const k = interpolate(f, [2, Math.min(len - 4, 26)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
   const n = Math.round((fx.from ?? 0) + (fx.to - (fx.from ?? 0)) * k);
+  // the widest value it shows (start or end) fits the slot: condensed digits ≈ 0.5 em
+  const widest = Math.max(...[fx.from ?? 0, fx.to].map((v) => `${fx.prefix ?? ""}${v.toLocaleString("ru-RU")}${fx.suffix ?? ""}`.length));
+  const size = Math.min(210, Math.floor((1080 - slot.left - slot.right) / (widest * 0.5)));
   return (
     <AbsoluteFill style={{ opacity: o }}>
       <div style={{ position: "absolute", left: slot.left, bottom: slot.bottom, transform: `translateY(${(1 - p) * 60}px)` }}>
         <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 30, letterSpacing: 3, color: "rgba(255,255,255,.9)", textTransform: "uppercase" }}>{fx.label}</div>
-        <div style={{ fontFamily: COND, fontWeight: 600, fontSize: 210, lineHeight: 0.95, color: "#fff", letterSpacing: -2, fontVariantNumeric: "tabular-nums", textShadow: "0 8px 40px rgba(0,0,0,.45)" }}>
+        <div style={{ fontFamily: COND, fontWeight: 600, fontSize: size, lineHeight: 0.95, color: "#fff", letterSpacing: -2, fontVariantNumeric: "tabular-nums", textShadow: "0 8px 40px rgba(0,0,0,.45)" }}>
           {fx.prefix ?? ""}
           {n.toLocaleString("ru-RU")}
           {fx.suffix ?? ""}
@@ -139,7 +143,7 @@ export const Particles: React.FC<P<"particles">> = ({ fx, face, accent, len, hea
   const o = envelope(f, 0, len, 8, 10);
   const h = head(f);
   const cx = h.x, cy = h.top + face.h * 0.45;
-  const R = face.w * 1.25;
+  const R = Math.min(face.w * 1.25, useKeepOut() - cy - 20);
   const dots: { x: number; y: number; z: number }[] = [];
   if ((fx.shape ?? "globe") === "globe") {
     // fibonacci sphere, spun around Y
@@ -177,6 +181,11 @@ export const Chart: React.FC<P<"chart">> = ({ fx, accent, len }) => {
   const o = envelope(f, 0, len, 3, 7);
   const draw = interpolate(f, [4, Math.max(6, len * 0.7)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
   const up = (fx.trend ?? "up") === "up";
+  // the card ends above the caption band
+  const S = useSafe();
+  // scaled to the safe width, ending above the caption band
+  const k = Math.min(1, (1080 - S.left - S.right - 20) / 900);
+  const top = Math.max(S.top, Math.min(610, useKeepOut() - 700 * k - 20));
   const pts = Array.from({ length: 12 }, (_, i) => {
     const t = i / 11;
     const base = up ? 1 - t : t;
@@ -186,8 +195,8 @@ export const Chart: React.FC<P<"chart">> = ({ fx, accent, len }) => {
   const L = 1300;
   const tip = pts[Math.min(11, Math.floor(draw * 11))];
   return (
-    <AbsoluteFill style={{ opacity: o, alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 900, height: 700, borderRadius: 40, background: "linear-gradient(160deg, rgba(25,28,40,.94), rgba(8,9,14,.96))", boxShadow: "0 40px 100px rgba(0,0,0,.6), inset 0 0 0 1.5px rgba(255,255,255,.12)", transform: `scale(${0.85 + 0.15 * p}) translateY(${(1 - p) * 120}px)`, overflow: "hidden" }}>
+    <AbsoluteFill style={{ opacity: o, alignItems: "center", paddingTop: top, paddingLeft: S.left, paddingRight: S.right }}>
+      <div style={{ width: 900, height: 700, flex: "none", transformOrigin: "50% 0%", borderRadius: 40, background: "linear-gradient(160deg, rgba(25,28,40,.94), rgba(8,9,14,.96))", boxShadow: "0 40px 100px rgba(0,0,0,.6), inset 0 0 0 1.5px rgba(255,255,255,.12)", transform: `scale(${(0.85 + 0.15 * p) * k}) translateY(${(1 - p) * 120}px)`, overflow: "hidden" }}>
         {fx.label ? <div style={{ fontFamily: SERIF, fontStyle: "italic", fontWeight: 700, fontSize: 64, color: "#fff", padding: "36px 46px 0" }}>{fx.label}</div> : null}
         <svg width={900} height={560} viewBox="0 0 900 560">
           <defs>
@@ -239,6 +248,7 @@ export const SerifCaptions: React.FC<{ words: Word[] }> = ({ words }) => {
   if (idx < 0) return null;
   const ph = all[idx];
   const k = keyIndex(ph);
+  const { sizes } = fitCaption([ph.map((w, i) => ({ chars: clean(w.w).length, em: i === k ? 0.6 : 0.56, max: i === k ? 96 : 64 }))], (1080 - S.left - S.right) * 0.96, CAPTION_H);
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: S.bottom + 40, paddingLeft: S.left, paddingRight: S.right }}>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "baseline", columnGap: 16, maxWidth: "100%" }}>
@@ -252,7 +262,7 @@ export const SerifCaptions: React.FC<{ words: Word[] }> = ({ words }) => {
                 fontFamily: em ? SERIF : SANS,
                 fontStyle: em ? "italic" : "normal",
                 fontWeight: em ? 700 : 500,
-                fontSize: em ? 96 : 64,
+                fontSize: sizes[0][i],
                 letterSpacing: em ? -1 : -1.5,
                 color: "#fff",
                 opacity: clamp01(p * 1.4),
@@ -277,8 +287,12 @@ const METAL = "linear-gradient(180deg, #ffffff 0%, #dfe3e9 36%, #858b95 52%, #ee
 
 export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
   const f = useCurrentFrame();
+  const floor = useKeepOut();
   const S = useSafe();
   const { fps } = useVideoConfig();
+  // everything on the card is centred in the safe box, not the frame (the right column is the app's buttons)
+  const boxW = 1080 - S.left - S.right;
+  const mid = S.left + boxW / 2;
   const inP = interpolate(f, [0, 6], [1, 0], { extrapolateRight: "clamp", easing: ease });
   const outP = interpolate(f, [len - 5, len], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const p = pop(f, fps, 2, 14, 140);
@@ -286,7 +300,7 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
   const words = fx.text.toUpperCase().split(/\s+/);
   const lines = words.length > 1 && fx.text.length > 9 ? [words.slice(0, Math.ceil(words.length / 2)).join(" "), words.slice(Math.ceil(words.length / 2)).join(" ")] : [words.join(" ")];
   const longest = Math.max(...lines.map((l) => l.length));
-  const size = Math.min(260, Math.round(940 / (Math.max(4, longest) * 0.6)));
+  const size = Math.min(260, Math.round((boxW - 40) / (Math.max(4, longest) * 0.6)));
   const dot = accent;
   const sweep = interpolate(f, [0, len], [-8, 8]);
   return (
@@ -296,7 +310,8 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
       {/* diagonal glass light */}
       <AbsoluteFill style={{ background: "linear-gradient(118deg, transparent 52%, rgba(255,255,255,.13) 52.2%, rgba(255,255,255,.05) 75%, transparent 100%)", transform: `translateX(${sweep}%)` }} />
       <AbsoluteFill style={{ background: "radial-gradient(ellipse 70% 45% at 50% 38%, rgba(255,255,255,.08), transparent 70%)" }} />
-      <div style={{ position: "absolute", top: 520, width: "100%", textAlign: "center" }}>
+      <div style={{ position: "absolute", top: 520, left: S.left, right: S.right, textAlign: "center" }}>
+        {fx.logo ? <Img src={staticFile(fx.logo)} style={{ height: 46, marginBottom: 34, opacity: clamp01((f - 1) / 6) }} /> : null}
         {fx.kicker ? (
           <div
             style={
@@ -334,7 +349,8 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
         <svg width={1080} height={1920} style={{ position: "absolute", inset: 0 }}>
           {(() => {
             const n = fx.path!.length;
-            const pts = fx.path!.map((_, i) => [600 - Math.sin(i * 1.3) * 140, 1000 + (i * (1920 - S.bottom - 1060)) / Math.max(1, n - 1)]);
+            // the path runs from under the word down to the caption band, never into it
+            const pts = fx.path!.map((_, i) => [mid + 120 - Math.sin(i * 1.3) * 140, 940 + (i * (floor - 60 - 940)) / Math.max(1, n - 1)]);
             const d = pts.map((q, i) => (i ? `S ${q[0] + 120} ${q[1] - 160} ${q[0]} ${q[1]}` : `M ${q[0]} ${q[1]}`)).join(" ");
             const draw = interpolate(f, [4, Math.max(6, len * 0.75)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             return (
@@ -356,7 +372,7 @@ export const Title: React.FC<P<"title">> = ({ fx, accent, len }) => {
           })()}
         </svg>
       ) : (
-        <div style={{ position: "absolute", left: 528, top: 1920 - S.bottom - 140, width: 24, height: 24, borderRadius: 99, background: dot, boxShadow: `0 0 30px 8px ${dot}`, opacity: 0.6 + 0.4 * Math.sin(f / 4) }} />
+        <div style={{ position: "absolute", left: mid - 12, top: floor - 80, width: 24, height: 24, borderRadius: 99, background: dot, boxShadow: `0 0 30px 8px ${dot}`, opacity: 0.6 + 0.4 * Math.sin(f / 4) }} />
       )}
     </AbsoluteFill>
   );
@@ -408,6 +424,8 @@ export const CleanCaptions: React.FC<{ words: Word[]; accent: string }> = ({ wor
   if (idx < 0) return null;
   const ph = all[idx];
   const o = clamp01((frame - (ph[0].s * fps - 3)) / 5);
+  // the strip's padding (2 × 18 px, rows 6 px apart) is part of the band
+  const { sizes } = fitCaption([ph.map((w) => ({ chars: clean(w.w).length, em: 0.58, max: 54 }))], (1080 - S.left - S.right - 60) * 0.96, CAPTION_H - 50);
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: S.bottom + 40, paddingLeft: S.left, paddingRight: S.right }}>
       <div style={{ maxWidth: "100%", padding: "18px 30px", borderRadius: 20, background: "rgba(0,0,0,.42)", backdropFilter: "blur(10px)", opacity: o, display: "flex", flexWrap: "wrap", justifyContent: "center", columnGap: 14, rowGap: 6 }}>
@@ -415,7 +433,7 @@ export const CleanCaptions: React.FC<{ words: Word[]; accent: string }> = ({ wor
           const now = t >= w.s - 0.03 && t < w.e + 0.05;
           const u = now ? clamp01((t - w.s + 0.03) / Math.max(0.08, w.e - w.s)) : t >= w.e ? 1 : 0;
           return (
-            <span key={i} style={{ position: "relative", fontFamily: SANS, fontWeight: 600, fontSize: 54, letterSpacing: -0.8, color: "#fff" }}>
+            <span key={i} style={{ position: "relative", fontFamily: SANS, fontWeight: 600, fontSize: sizes[0][i], letterSpacing: -0.8, color: "#fff" }}>
               {clean(w.w)}
               <span style={{ position: "absolute", left: 0, bottom: -4, height: 5, borderRadius: 3, width: `${(now ? u : 0) * 100}%`, background: accent }} />
             </span>

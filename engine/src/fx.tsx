@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, random, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COND, SANS, SERIF } from "./fonts";
 import { AppIcon } from "./icons";
-import { useSafe, useSlot } from "./safe";
+import { useKeepOut, useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
 import type { Face, Fx, Head } from "./types";
 
@@ -101,6 +101,7 @@ export const Pop: React.FC<P<"pop">> = ({ fx, len, head }) => {
   const h0 = head(0);
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const floor = useKeepOut();
   return (
     <AbsoluteFill>
       {fx.images.slice(0, 4).map((im, i) => {
@@ -108,8 +109,9 @@ export const Pop: React.FC<P<"pop">> = ({ fx, len, head }) => {
         const o = envelope(f, i * 4, len - i * 4, 3, 7);
         const s = POP_SLOTS[i];
         // fly from behind the head to the slot
-        const cx = h0.x + (s.x - h0.x) * p, cy = h0.top + 250 + (s.y - 250) * p;
         const w = 300, h = 380;
+        // the lower photos stop above the caption band
+        const cx = h0.x + (s.x - h0.x) * p, cy = Math.min(floor - h / 2 - 20, h0.top + 250 + (s.y - 250) * p);
         return (
           <div
             key={i}
@@ -231,7 +233,7 @@ export const Orbit: React.FC<P<"orbit"> & { side: "back" | "front" }> = ({ fx, f
   const o = envelope(f, 0, len, 6, 8);
   const grow = pop(f, fps, 0, 14, 120);
   const rx = face.w * 1.55 * grow, ry = face.w * 0.3 * grow;
-  const cy = face.y + face.h * 1.25;
+  const cy = Math.min(useKeepOut() - ry - 100, face.y + face.h * 1.25);
   const n = fx.icons.length;
   return (
     <AbsoluteFill style={{ opacity: o }}>
@@ -381,6 +383,7 @@ export const Search: React.FC<P<"search">> = ({ fx, len }) => {
 export const Broll: React.FC<P<"broll">> = ({ fx, len }) => {
   const f = useCurrentFrame();
   const S = useSafe();
+  const floor = useKeepOut();
   const inP = interpolate(f, [0, 7], [1, 0], { extrapolateRight: "clamp", easing: ease });
   const outP = interpolate(f, [len - 6, len], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const x = inP * 1080 - outP * 1080;
@@ -395,7 +398,7 @@ export const Broll: React.FC<P<"broll">> = ({ fx, len }) => {
       )}
       <AbsoluteFill style={{ background: "linear-gradient(180deg, transparent 55%, rgba(0,0,0,.75) 100%)" }} />
       {fx.text ? (
-        <div style={{ position: "absolute", left: S.left, right: S.right, bottom: S.bottom + 40, textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontWeight: 700, fontSize: 110, color: "#fff", lineHeight: 1, opacity: clamp01((f - 4) / 6) }}>
+        <div style={{ position: "absolute", left: S.left, right: S.right, bottom: 1920 - floor, textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontWeight: 700, fontSize: 110, color: "#fff", lineHeight: 1, opacity: clamp01((f - 4) / 6) }}>
           {fx.text}
         </div>
       ) : null}
@@ -410,7 +413,8 @@ export const Ribbon: React.FC<P<"ribbon"> & { side: "back" | "front" }> = ({ fx,
   const color = fx.color ?? "#C6F432";
   const o = interpolate(f, [len - 8, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   // around the chest: two face-heights below the top of the head
-  const cx = h.x, cy = h.top + face.h * 2, rx = 470, ry = 130;
+  const rx = 470, ry = 130;
+  const cx = h.x, cy = Math.min(useKeepOut() - ry - 60, h.top + face.h * 2);
   // ellipse halves; the back half runs over the top (behind the shoulders), the front half under
   const back = `M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`;
   const front = `M ${cx + rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx - rx} ${cy}`;

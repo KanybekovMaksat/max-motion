@@ -70,7 +70,8 @@ export type Fx =
   // outline around the person's silhouette: neon tube, white sticker edge or soft rim light
   | (Base & { type: "outline"; style?: "neon" | "sticker" | "rim"; color?: string })
   // full-screen title card between phrases (перебивка): curtain + glass light + metal word
-  | (Base & { type: "title"; text: string; kicker?: string; kickerStyle?: "caps" | "serif"; path?: string[]; bg?: string })
+  // logo: a brand mark (svg/png in public/) small above the kicker
+  | (Base & { type: "title"; text: string; kicker?: string; kickerStyle?: "caps" | "serif"; path?: string[]; bg?: string; logo?: string })
   // any sound from public/sfx at a moment
   // any library sound at a moment; peak: its loudest point lands on `at`
   | (Base & { type: "sfx"; name: string; volume?: number; peak?: boolean });
@@ -106,7 +107,9 @@ export type Edit = {
     dips?: { from: number; to: number; level: number }[]; // short dips, e.g. a breath before the CTA
     fadeOut?: number; // seconds, default 1
   };
-  grade: { contrast: number; saturate: number; brightness: number; vignette: number };
+  // room: the background only (the person cutout stays as graded) — dim 0–1 darker, desat 0–1 greyer,
+  // blur px; podcasts and interviews: the speaker pops off a busy studio
+  grade: { contrast: number; saturate: number; brightness: number; vignette: number; room?: { dim?: number; desat?: number; blur?: number } };
   fx: Fx[];
 };
 

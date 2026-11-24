@@ -37,6 +37,7 @@ Mixed signals: goal wins over energy (a fast-talking teacher stays `calm` but wi
 - Warm skin + warm room → cool accent (blue/indigo). Cold, grey room → warm accent (gold, red).
 - Light accents (lime, yellow, gold): `pill` captions switch to dark text automatically, `mix` caps take the accent as is (fine on a dark room, use a deeper accent on a light one); keep `behind` words big (≥ 180 px) so the gradient reads.
 - Grade follows the look: `podcast`/`luxury` darker with a heavy vignette, `brand`/`calm` brighter and flatter, `hype` more contrast and saturation.
+- **Podcast / interview cuts** (studio, several cameras): grade the room, not the face — `grade.room` `{dim 0.4, desat 0.5, blur 5}` (podcast default; 0.25 / 0.3 / 3 for a quiet set) pushes a busy or loud-coloured set back while the speaker (the cutout) keeps their skin tone; overall contrast ≈1.1, saturate ≈0.95, brightness ≈0.96, vignette ≈0.6. Don't crush the person: if the face goes muddy, lower `brightness` less and `dim` more. A brand logo belongs on title cards (`logo`), not as a corner watermark.
 
 ## 4. Captions
 
@@ -90,10 +91,10 @@ Intensity knobs, per look:
 
 ## Sound design
 
-Inflation kills sound: if every effect makes a noise, none of them means anything. A 40 s reel gets **8–16 cues**, not 70.
+Inflation kills sound: if every effect makes a noise, none of them means anything. A 40 s reel gets **6–10 cues** by default (between "structure only" and "every meaning"), not 70.
 
 1. **A sound marks a change of state the viewer must register**: a new section (title card), the music drop, the offer facts (gift, deadline, scarcity), a message arriving, the final ask. Motion that is only decoration — outlines, halos, rims, orbits, particles, rays, ribbons, punches, shakes, caption words flying behind the head, checklist ticks, typing — stays silent. The motion already is the accent.
-2. **Budget**: ≤ 4 cues in any 10 s, ≥ 1.2 s apart (the engine enforces it for automatic sounds). Two identical objects in a row (two gift cards) = one gesture, same sound.
+2. **Budget**: ≤ 3 cues in any 10 s, ≥ 1.5 s apart (the engine enforces it for automatic sounds). Two identical objects in a row (two gift cards) = one gesture, same sound.
 3. **One meaning = one sound for the whole reel**: title card always whoosh-big + impact, an offer card always pop, a number always `counter`, a message always `notify`. The second title card must sound like the first so it reads instantly.
 4. **Layers**: at most 2 at one moment, and only on the pillars (title cards, the drop).
 5. **Put sounds in the speech gaps.** Under speech keep mid/high sounds ≤ 0.4, low booms ≤ 0.45. Align whooshes and risers by their peak (`peak: true`).

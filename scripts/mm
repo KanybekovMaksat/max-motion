@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # max-motion runner. Installs itself on first use, then runs the engine.
 #   mm doctor                         check / install everything (idempotent)
+#   mm reframe <16:9 video> <out.mp4> [--ranges 12.1-27.6,63-70.5] [--side auto|left|right|"0-20:left,20-:right"]
+#                                     multi-camera podcast → 9:16, a still crop per shot on one person (then prep it)
 #   mm prep <video> <slug> [--lang ru|en|auto] [--cut]
+#   mm trim <slug> 6.85-8.40,37.95-39.05 [--lang ru]   cut spans out of a prepped clip (video, cutout, words) — before editing
 #   mm plan <slug> [--goal "..."] [--look sell|brand|podcast|hype|calm|luxury] [--accent #hex] [--force]
 #   mm plan … [--platform reels|tiktok|shorts|all]   keep captions/cards out of that app's UI (default all)
 #   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult] [--safe [reels|tiktok|shorts|all]]
@@ -68,7 +71,9 @@ case "$cmd" in
   doctor) setup; [ -s "$WS/public/sfx/index.json" ] || say "no sounds yet: put a sound pack in <skill>/sounds/pack or run  mm sfx <folder | Yandex Disk link>  (renders have no sounds until then)"; say "ready → $WS" ;;
   home) echo "$WS" ;;
   looks) setup; cd "$WS" && node -e 'import("./tools/looks.mjs").then(m=>{for(const [k,v] of Object.entries(m.LOOKS))console.log(k.padEnd(8),v.accent,v.captionStyle.padEnd(6),"—",v.label)})' ;;
+  reframe) setup; node "$WS/tools/reframe.mjs" "$@" ;;
   prep) setup; cd "$WS" && node tools/prep.mjs "$@" ;;
+  trim) setup; cd "$WS" && node tools/trim.mjs "$@" ;;
   plan) setup; cd "$WS" && node tools/plan.mjs "$@" ;;
   still) setup; slug="$1"; sec="$2"; shift 2; cd "$WS" && node tools/render.mjs "$slug" --still "$sec" "$@" ;;
   render) setup; cd "$WS" && node tools/render.mjs "$@" ;;
@@ -78,6 +83,6 @@ case "$cmd" in
       npx remotion still src/index.ts SafeZone "out/safe-zones/$p.png" --props="{\"platform\":\"$p\"}" --image-format=png >/dev/null 2>&1 && echo "→ $WS/out/safe-zones/$p.png"
     done ;;
   studio) setup; cd "$WS" && npx remotion studio src/index.ts ;;
-  test) setup; cd "$WS" && node --test tools/*.test.mjs ;;
+  test) setup; cd "$WS" && node --experimental-strip-types --test tools/*.test.mjs ;;
   *) sed -n '2,17p' "$0" ;;
 esac

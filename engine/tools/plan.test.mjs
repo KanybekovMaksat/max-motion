@@ -118,3 +118,13 @@ test("safe zones: the union covers each platform and leaves a usable box", () =>
   assert.ok(1080 - Z.all.left - Z.all.right >= 800);
   assert.ok(1920 - Z.all.top - Z.all.bottom >= 1150);
 });
+
+test("trim: cut spans drop their words and shift the rest", async () => {
+  const { keepOf, remap, trimWords } = await import("./trim.mjs");
+  const keep = keepOf([[2, 3], [5, 6]], 8);
+  assert.deepEqual(keep, [[0, 2], [3, 5], [6, 8]]);
+  assert.equal(remap(4, keep), 3);
+  assert.equal(remap(2.5, keep), null);
+  const w = trimWords([W("a", 1, 1.5), W("b", 2.2, 2.6), W("c", 6.5, 7)], keep);
+  assert.deepEqual(w.map((x) => [x.w, x.s]), [["a", 1], ["c", 4.5]]);
+});

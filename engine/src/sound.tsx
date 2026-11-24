@@ -3,7 +3,7 @@
 // section cut, the music drop, the final ask. Outlines, halos, orbits, punches, shakes, rays,
 // caption words and checklist ticks are silent unless an effect says `sound: true`.
 // One meaning = one sound for the whole reel (no rotating variants), and a scheduler keeps the
-// density down: at most 4 cues in any 10 s, at least 1.2 s apart, higher priority wins.
+// density down: at most 3 cues in any 10 s, at least 1.5 s apart, higher priority wins.
 // The library is public/sfx (built by `mm sfx`, index.json has each sound's peak); whooshes and
 // risers are placed so their peak lands on the moment, not their start.
 import React from "react";
@@ -63,7 +63,7 @@ const ALIAS: Record<string, string> = {
   swish: "whoosh-chimes", tick: "click-crispy", riser: "riser-short",
 };
 
-export const BUDGET = { per10s: 4, gap: 1.2 };
+export const BUDGET = { per10s: 3, gap: 1.5 };
 
 type Cue = { key: string; t: number; prio: number; type: string; play: { name: string; at: number; vol: number }[] };
 

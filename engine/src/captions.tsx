@@ -5,8 +5,9 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { COND, SANS, SERIF } from "./fonts";
+import { fitCaption } from "./layout";
 import { phrases } from "./fx2";
-import { useSafe } from "./safe";
+import { CAPTION_H, CAPTION_LIFT, useSafe } from "./safe";
 import { clamp01, pop } from "./time";
 import type { Edit, Head, Word } from "./types";
 
@@ -15,8 +16,10 @@ type Enter = "blur" | "rise" | "type" | "pop";
 export type Cap = { words: Word[]; key: number; role: Role; enter: Enter; behind: boolean; stack: boolean; s: number; e: number };
 
 const clean = (w: string) => w.replace(/[.,!?…:;«»"“”()]+/g, "");
-// glyph width per em, to fit a word into the line (Cyrillic is a bit wider than Latin)
+// glyph width per em, to fit a word into the line (Cyrillic is a bit wider than Latin), and the
+// size each role wants before the phrase is fitted into the caption band
 const EM: Record<Role, number> = { plain: 0.56, serif: 0.6, caps: 0.52 };
+const MAX: Record<Role, number> = { plain: 50, serif: 104, caps: 92 };
 
 // The word that carries the phrase: a number, a word listed in edit.captionKeys, else the longest of 5+ letters.
 function keyOf(ph: Word[], keys: string[]) {
@@ -119,16 +122,15 @@ export const MixCaptions: React.FC<{ plan: Cap[]; accent: string }> = ({ plan, a
   const t = frame / fps;
   const c = active(plan, t);
   if (!c) return null;
-  const width = 1080 - S.left - S.right - 40;
-  const plainSize = 50;
-  const fit = (w: Word, role: Role, max: number) => Math.min(max, Math.round(width / (Math.max(3, clean(w.w).length) * EM[role])));
+  // a little narrower than the box: the glyph widths are estimates
+  const width = (1080 - S.left - S.right - 40) * 0.96;
   const out = clamp01(((c.e - 0.04 - t) * fps) / 4);
   const show = c.words.map((w, i) => ({ w, i })).filter(({ i }) => !(c.behind && i === c.key));
-  const word = ({ w, i }: { w: Word; i: number }) => {
-    const role = i === c.key ? c.role : "plain";
-    return <CapWord key={i} w={w} role={role} enter={c.enter} size={role === "plain" ? fit(w, role, plainSize) : fit(w, role, role === "serif" ? 104 : 92)} accent={accent} />;
-  };
+  const roleOf = (i: number): Role => (i === c.key ? c.role : "plain");
   const lines = c.stack ? [show.filter(({ i }) => i !== c.key), show.filter(({ i }) => i === c.key)] : [show];
+  // every phrase fits the caption band, so a card above it can never be overlapped
+  const { sizes } = fitCaption(lines.map((l) => l.map(({ w, i }) => ({ chars: clean(w.w).length, em: EM[roleOf(i)], max: MAX[roleOf(i)] }))), width, CAPTION_H);
+  const word = ({ w, i }: { w: Word; i: number }, size: number) => <CapWord key={i} w={w} role={roleOf(i)} enter={c.enter} size={size} accent={accent} />;
   return (
     <AbsoluteFill>
       <div
@@ -136,7 +138,7 @@ export const MixCaptions: React.FC<{ plan: Cap[]; accent: string }> = ({ plan, a
           position: "absolute",
           left: S.left + 20,
           right: S.right + 20,
-          bottom: S.bottom + 40,
+          bottom: S.bottom + CAPTION_LIFT,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -148,7 +150,7 @@ export const MixCaptions: React.FC<{ plan: Cap[]; accent: string }> = ({ plan, a
       >
         {lines.map((l, j) => (
           <div key={j} style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "baseline", columnGap: 14, marginTop: j ? -8 : 0 }}>
-            {l.map(word)}
+            {l.map((x, n) => word(x, sizes[j][n]))}
           </div>
         ))}
       </div>

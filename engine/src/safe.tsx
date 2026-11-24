@@ -4,6 +4,7 @@
 import React, { createContext, useContext } from "react";
 import { AbsoluteFill } from "remotion";
 import { SANS } from "./fonts";
+import { captionTop } from "./layout";
 import ZONES from "./safe-zones.json";
 
 export type Platform = "reels" | "tiktok" | "shorts" | "all";
@@ -12,18 +13,23 @@ export type Zone = { label: string; top: number; bottom: number; left: number; r
 export const PLATFORMS: Platform[] = ["reels", "tiktok", "shorts", "all"];
 export const zoneOf = (p?: string): Zone => (ZONES as unknown as Record<string, Zone>)[p && p in ZONES ? p : "all"];
 
-// height kept free for captions at the bottom of the zone; cards sit right above it
-export const CAPTION_BAND = 170;
+// the caption band and the line graphics stop at (layout.ts)
+export { CAPTION_H, CAPTION_LIFT, captionTop } from "./layout";
 
 const SafeCtx = createContext<{ zone: Zone; captions: boolean }>({ zone: zoneOf("all"), captions: true });
 export const SafeProvider = SafeCtx.Provider;
 export const useSafe = () => useContext(SafeCtx).zone;
+// the lowest y a graphic may reach
+export const useKeepOut = () => {
+  const { zone, captions } = useContext(SafeCtx);
+  return captionTop(zone, captions);
+};
 
 // the lower-third slot for one front card (card, counter, checklist, chat, progress, search, quote):
-// inside the side margins, bottom edge just above the captions
+// inside the side margins, bottom edge just above the caption band
 export function useSlot() {
   const { zone, captions } = useContext(SafeCtx);
-  return { left: zone.left + 30, right: zone.right + 20, bottom: zone.bottom + (captions ? CAPTION_BAND : 40) };
+  return { left: zone.left + 30, right: zone.right + 20, bottom: 1920 - captionTop(zone, captions) };
 }
 
 // ── preview overlay: dead areas tinted, safe box dashed, a mock of the app UI ──

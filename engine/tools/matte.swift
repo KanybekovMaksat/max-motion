@@ -1,6 +1,7 @@
 // Person matte + subject box via Apple Vision, no Python needed.
 //   swift tools/matte.swift box  <video>             -> JSON {cx, cy, w, h} (normalized, averaged over sampled frames)
 //   swift tools/matte.swift mask <video> <outDir>    -> grayscale PNG per frame: 000001.png ...
+//   swift tools/matte.swift faces <video>            -> every 5th frame: [frame, [[cx, cy, w, h], …]]
 import AVFoundation
 import CoreImage
 import Foundation
@@ -52,6 +53,25 @@ if mode == "box" {
   }
   if n == 0 { print("{\"cx\":0.5,\"cy\":0.4,\"w\":0,\"h\":0}"); exit(0) }
   print(String(format: "{\"cx\":%.4f,\"cy\":%.4f,\"w\":%.4f,\"h\":%.4f}", sx / n, sy / n, sw / n, sh / n))
+  exit(0)
+}
+
+if mode == "faces" {
+  // every 5th frame: [frame, [[cx, cy, w, h], …]] for every face, normalized, top-left origin
+  var rows: [String] = []
+  while let sample = out.copyNextSampleBuffer() {
+    defer { frame += 1 }
+    if frame % 5 != 0 { continue }
+    guard let pb = CMSampleBufferGetImageBuffer(sample) else { continue }
+    let faces = VNDetectFaceRectanglesRequest()
+    try? VNImageRequestHandler(cvPixelBuffer: pb).perform([faces])
+    let list = (faces.results ?? []).map { f -> String in
+      let b = f.boundingBox
+      return String(format: "[%.4f,%.4f,%.4f,%.4f]", b.midX, 1 - b.midY, b.width, b.height)
+    }
+    rows.append("[\(frame),[\(list.joined(separator: ","))]]")
+  }
+  print("[\(rows.joined(separator: ",\n"))]")
   exit(0)
 }
 

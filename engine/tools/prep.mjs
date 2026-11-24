@@ -93,7 +93,7 @@ export function keepSegments(words, duration, gap = 0.3, pad = 0.08) {
   return segs.map(([s, e]) => [Math.round(s * 1000) / 1000, Math.round(e * 1000) / 1000]);
 }
 
-function transcribe(base, tmp, lang) {
+export function transcribe(base, tmp, lang) {
   const wav = path.join(tmp, "a.wav");
   ff(["-i", base, "-ar", "16000", "-ac", "1", wav]);
   const model = path.join(ROOT, "models", "ggml-small.bin");
