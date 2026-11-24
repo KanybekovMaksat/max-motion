@@ -156,6 +156,9 @@ const Captions: React.FC<{ words: Word[]; accent: string }> = ({ words, accent }
   if (idx < 0) return null;
   const c = all[idx];
   const p = pop(frame, fps, Math.round(c[0].s * fps) - 1, 14, 220);
+  // shrink long chunks so they stay inside ~960px
+  const chars = c.reduce((a, w) => a + w.w.length + 1, 0);
+  const size = Math.min(66, Math.round(960 / (chars * 0.6)));
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: 300 }}>
       <div style={{ display: "flex", gap: 18, transform: `translateY(${(1 - p) * 30}px) scale(${0.9 + 0.1 * p})`, opacity: p }}>
@@ -168,7 +171,7 @@ const Captions: React.FC<{ words: Word[]; accent: string }> = ({ words, accent }
               style={{
                 fontFamily: SANS,
                 fontWeight: 800,
-                fontSize: 66,
+                fontSize: size,
                 letterSpacing: -1.5,
                 color: now ? inkOn(accent) : on ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.45)",
                 background: now ? accent : "transparent",

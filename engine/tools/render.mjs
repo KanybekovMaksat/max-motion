@@ -28,7 +28,7 @@ if (argv.includes("--still")) {
 }
 
 const out = path.join("out", `${slug}.mp4`);
-rem(["render", "src/index.ts", "ProEdit", out, `--props=${props}`, "--codec=h264", "--crf=17", "--concurrency=50%"]);
+rem(["render", "src/index.ts", "ProEdit", out, `--props=${props}`, "--codec=h264", "--crf=17", "--concurrency=4", "--timeout=180000"]);
 console.log(`→ ${path.join(ROOT, out)}`);
 
 // --showcase kept as a shortcut for --wrap showcase
@@ -43,7 +43,7 @@ if (wraps.length) {
     if (!COMP[w]) throw new Error(`unknown wrapper "${w}" — use showcase, chat or prompt`);
     const o = `out/${slug}-${w}.mp4`;
     const { wrappers = {}, ...common } = extra;
-    rem(["render", "src/index.ts", COMP[w], o, `--props=${JSON.stringify({ ...common, ...(wrappers[w] ?? {}), slug })}`, "--codec=h264", "--crf=17", "--concurrency=50%"]);
+    rem(["render", "src/index.ts", COMP[w], o, `--props=${JSON.stringify({ ...common, ...(wrappers[w] ?? {}), slug })}`, "--codec=h264", "--crf=17", "--concurrency=4", "--timeout=180000"]);
     console.log(`→ ${path.join(ROOT, o)}`);
   }
 }
