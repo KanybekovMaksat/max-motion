@@ -2,3 +2,5 @@ node_modules/
 .DS_Store
 engine/public/sfx/
 sfx-pack/
+sounds/pack/
+sounds/CATALOG.md

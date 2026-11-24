@@ -7,7 +7,7 @@
 #   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult] [--safe [reels|tiktok|shorts|all]]
 #   mm render <slug> [--wrap showcase,chat,prompt|all] [--safe [platform]]   --safe = preview with the app UI on top
 #   mm safezones                      export the safe-zone templates (transparent PNG) to <workspace>/out/safe-zones/
-#   mm sfx <pack folder | Yandex Disk link>   build the sound library (public/sfx) from your sound pack
+#   mm sfx [pack folder | Yandex Disk link]   build the sound library (public/sfx); no argument = the skill's sounds/pack
 #   mm music <slug> <track> [--start <sec>] [--volume 0.4] [--duck 0.2]   music bed, ducked under the voice
 #   mm looks                          list looks
 #   mm studio                         open Remotion Studio
@@ -51,6 +51,12 @@ setup() {
     say "building the Apple Vision cutout tool…"
     swiftc -O "$WS/tools/matte.swift" -o "$WS/tools/matte" >&2
   fi
+  # sound library: rebuilt from the skill's own pack when it's missing or the pack changed
+  local pack="$SKILL_DIR/sounds/pack" idx="$WS/public/sfx/index.json"
+  if [ -d "$pack" ] && { [ ! -s "$idx" ] || [ -n "$(find "$pack" "$WS/tools/sfx.mjs" -newer "$idx" -print -quit)" ]; }; then
+    say "building the sound library from sounds/pack…"
+    (cd "$WS" && node tools/sfx.mjs "$pack" --catalog "$SKILL_DIR/sounds/CATALOG.md" >&2)
+  fi
   if [ ! -s "$WS/models/ggml-small.bin" ]; then
     say "downloading the whisper model (~480 MB, once)…"
     curl -fL --progress-bar -o "$WS/models/ggml-small.bin.part" "$MODEL_URL" && mv "$WS/models/ggml-small.bin.part" "$WS/models/ggml-small.bin"
@@ -59,7 +65,7 @@ setup() {
 
 cmd="${1:-help}"; shift || true
 case "$cmd" in
-  doctor) setup; [ -s "$WS/public/sfx/index.json" ] || say "no sounds yet: run  mm sfx <your sound pack folder or Yandex Disk link>  (renders are silent fx until then)"; say "ready → $WS" ;;
+  doctor) setup; [ -s "$WS/public/sfx/index.json" ] || say "no sounds yet: put a sound pack in <skill>/sounds/pack or run  mm sfx <folder | Yandex Disk link>  (renders have no sounds until then)"; say "ready → $WS" ;;
   home) echo "$WS" ;;
   looks) setup; cd "$WS" && node -e 'import("./tools/looks.mjs").then(m=>{for(const [k,v] of Object.entries(m.LOOKS))console.log(k.padEnd(8),v.accent,v.captionStyle.padEnd(6),"—",v.label)})' ;;
   prep) setup; cd "$WS" && node tools/prep.mjs "$@" ;;
@@ -67,7 +73,7 @@ case "$cmd" in
   still) setup; slug="$1"; sec="$2"; shift 2; cd "$WS" && node tools/render.mjs "$slug" --still "$sec" "$@" ;;
   render) setup; cd "$WS" && node tools/render.mjs "$@" ;;
   music) setup; cd "$WS" && node tools/audio.mjs music "$@" ;;
-  sfx) setup; cd "$WS" && node tools/sfx.mjs "$@" ;;
+  sfx) setup; cd "$WS" && if [ $# -eq 0 ]; then node tools/sfx.mjs "$SKILL_DIR/sounds/pack" --catalog "$SKILL_DIR/sounds/CATALOG.md"; else node tools/sfx.mjs "$@"; fi ;;
   safezones) setup; cd "$WS" && mkdir -p out/safe-zones && for p in reels tiktok shorts all; do
       npx remotion still src/index.ts SafeZone "out/safe-zones/$p.png" --props="{\"platform\":\"$p\"}" --image-format=png >/dev/null 2>&1 && echo "→ $WS/out/safe-zones/$p.png"
     done ;;

@@ -1,6 +1,8 @@
 // Build the sound library from a sound pack: trim each sound to its useful part, level it,
 // find where its peak sits, write public/sfx/<name>.mp3 + public/sfx/index.json.
-// usage: node tools/sfx.mjs <pack folder | public Yandex Disk link>
+// usage: node tools/sfx.mjs <pack folder | public Yandex Disk link> [--catalog <file.md>]
+// Besides the named sounds below, every file of the pack is exported as "pack/<slug>" (usable in
+// {type:"sfx", name:"pack/…"}); --catalog writes the list of them for picking by ear-name.
 // The pack itself is not shipped with the skill (licensed sounds) — only this map of file names.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -62,6 +64,11 @@ export const SOUNDS = {
   "success": { file: "MA_PashaStriker_BellsOfSuccess_1.wav", max: 1.6 },
 };
 
+const TR = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "ts", ч: "ch", ш: "sh", щ: "sch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya" };
+// "Импакт (колокольчик).wav" → "impakt-kolokolchik"
+export const slugOf = (name) =>
+  [...path.parse(name).name.normalize("NFC").toLowerCase()].map((c) => TR[c] ?? c).join("").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 
 // a public Yandex Disk folder → <workspace>/sfx-pack (audio files only)
@@ -110,13 +117,15 @@ export function cutPoints(db, start = 0, max = 2.5) {
 }
 
 async function main() {
-  const src = process.argv[2];
+  const argv = process.argv.slice(2);
+  const src = argv[0];
+  const catalog = argv.includes("--catalog") ? path.resolve(argv[argv.indexOf("--catalog") + 1]) : null;
   if (!src) {
     console.error("usage: npm run sfx -- <pack folder | public Yandex Disk link>");
     process.exit(1);
   }
   const pack = /^https?:/.test(src) ? await fromYandex(src) : path.resolve(src);
-  const files = walk(pack);
+  const files = walk(pack).filter((f) => /\.(wav|mp3|m4a|aif+|ogg|flac)$/i.test(f));
   const out = path.join(ROOT, "public", "sfx");
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
@@ -140,8 +149,51 @@ async function main() {
     ]);
     index[name] = { dur: +c.dur.toFixed(2), peak: +c.peak.toFixed(2) };
   }
+  // the whole pack, each file trimmed to its sound (up to 12 s), same levelling
+  fs.mkdirSync(path.join(out, "pack"));
+  const rows = [];
+  const taken = new Set();
+  for (const file of files.sort()) {
+    let slug = slugOf(path.basename(file)) || "sound";
+    if (taken.has(slug)) continue; // the pack repeats some files across folders
+    taken.add(slug);
+    let c;
+    try {
+      c = cutPoints(envelope(file), 0, 12);
+    } catch {
+      console.warn(`  skip ${path.basename(file)}: can't decode`);
+      continue;
+    }
+    const fadeOut = Math.min(0.25, c.dur * 0.4);
+    execFileSync("ffmpeg", [
+      "-v", "error", "-y", "-ss", String(c.start), "-t", String(c.dur), "-i", file,
+      "-af", `volume=${(-9 - c.top).toFixed(1)}dB,alimiter=limit=0.89:level=false,afade=t=in:d=0.005,afade=t=out:st=${(c.dur - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}`,
+      "-ac", "2", "-ar", "44100", "-b:a", "192k", path.join(out, "pack", `${slug}.mp3`),
+    ]);
+    index[`pack/${slug}`] = { dur: +c.dur.toFixed(2), peak: +c.peak.toFixed(2) };
+    rows.push(`| \`pack/${slug}\` | ${path.relative(pack, path.dirname(file)) || "."} | ${path.basename(file)} | ${c.dur.toFixed(2)} | ${c.peak.toFixed(2)} |`);
+  }
   fs.writeFileSync(path.join(out, "index.json"), JSON.stringify(index, null, 1));
-  console.log(`${Object.keys(index).length} sounds → ${out}`);
+  if (catalog) {
+    const named = Object.entries(SOUNDS).filter(([n]) => index[n]).map(([n, s]) => `| \`${n}\` | ${s.file} | ${index[n].dur} | ${index[n].peak} |`);
+    fs.writeFileSync(
+      catalog,
+      [
+        "# Sound library (local, not in git)",
+        "",
+        "Built by `mm sfx` from `sounds/pack/`. Use any name in `{ \"type\": \"sfx\", \"name\": \"…\", \"at\": 1.2, \"volume\": 0.5 }`.",
+        "`peak` = seconds from the start to the loudest moment: for a whoosh or riser put `at` = moment − peak.",
+        "",
+        "## Named (the effects use these automatically)",
+        "| name | pack file | dur s | peak s |", "|---|---|---|---|", ...named,
+        "",
+        "## Whole pack",
+        "| name | folder | file | dur s | peak s |", "|---|---|---|---|---|", ...rows,
+        "",
+      ].join("\n"),
+    );
+  }
+  console.log(`${Object.keys(index).length} sounds → ${out}${catalog ? `, catalog → ${catalog}` : ""}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
