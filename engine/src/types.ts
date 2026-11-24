@@ -10,6 +10,8 @@ export type Meta = {
   width: number;
   height: number;
   face: Face;
+  // voice loudness (LUFS), measured by prep/render; sounds and music are scaled to it
+  lufs?: number;
 };
 
 export type Word = { w: string; s: number; e: number };
@@ -93,6 +95,8 @@ export type Edit = {
   // auto sound on every effect (whoosh, pop, tick…) and its overall level
   sfx?: boolean;
   sfxVolume?: number;
+  // music bed (`mm music`): `volume` in pauses, `duck` under the voice, both 0–1 of a track levelled to the voice
+  music?: { src: string; volume?: number; duck?: number; from?: string; start?: number };
   grade: { contrast: number; saturate: number; brightness: number; vignette: number };
   fx: Fx[];
 };

@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { master, voiceLufs } from "./audio.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -36,7 +37,9 @@ if (argv.includes("--still")) {
 }
 
 const out = path.join("out", `${slug}${tag}.mp4`);
+voiceLufs(slug); // measured once into meta.json: sounds and music are levelled to the voice
 rem(["render", "src/index.ts", "ProEdit", out, `--props=${props}`, "--codec=h264", "--crf=17", "--concurrency=4", "--timeout=180000"]);
+master(path.join(ROOT, out));
 console.log(`→ ${path.join(ROOT, out)}`);
 
 // --showcase kept as a shortcut for --wrap showcase
@@ -53,6 +56,7 @@ if (wraps.length) {
     const o = `out/${slug}-${w}.mp4`;
     const { wrappers = {}, ...common } = extra;
     rem(["render", "src/index.ts", COMP[w], o, `--props=${JSON.stringify({ ...common, ...(wrappers[w] ?? {}), slug })}`, "--codec=h264", "--crf=17", "--concurrency=4", "--timeout=180000"]);
+    master(path.join(ROOT, o));
     console.log(`→ ${path.join(ROOT, o)}`);
   }
 }

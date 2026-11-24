@@ -1,20 +1,23 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, CalculateMetadataFunction, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, CalculateMetadataFunction, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { SANS } from "./fonts";
 import { Backlight, Behind, Broll, Card, Film, Grain, Halo, Orbit, Pop, Quote, Rays, Ribbon, Search } from "./fx";
 import { Chart, Chat, Checklist, CleanCaptions, Counter, Particles, Progress, SerifCaptions, Title, WordCaptions } from "./fx2";
 import { CaptionBack, MixCaptions, captionPlan } from "./captions";
+import { Music, Sounds, voiceGain, type SfxIndex } from "./sound";
 import { SafeOverlay, SafeProvider, useSafe, zoneOf, type Platform } from "./safe";
 import { envelope, pop } from "./time";
 import type { Edit, Fx, Head, Meta, Word } from "./types";
 
 // `safe` draws the app UI of that platform over the video (preview only, never in the final render)
-export type ProEditData = { slug: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[] };
+export type ProEditData = { slug: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[]; sfx?: SfxIndex };
 
 export const calcProEdit: CalculateMetadataFunction<ProEditData> = async ({ props }) => {
   const get = async <T,>(f: string): Promise<T> => (await fetch(staticFile(`${props.slug}/${f}`))).json();
   const [meta, edit, words, track] = await Promise.all([get<Meta>("meta.json"), get<Edit>("edit.json"), get<Word[]>("words.json"), get<Head[]>("track.json")]);
-  return { durationInFrames: Math.floor(meta.duration * meta.fps), fps: meta.fps, width: meta.width, height: meta.height, props: { ...props, meta, edit, words, track } };
+  // the sound library is built by `mm sfx`; without it the reel renders silent fx
+  const sfx = await fetch(staticFile("sfx/index.json")).then((r) => (r.ok ? (r.json() as Promise<SfxIndex>) : {})).catch(() => ({}));
+  return { durationInFrames: Math.floor(meta.duration * meta.fps), fps: meta.fps, width: meta.width, height: meta.height, props: { ...props, meta, edit, words, track, sfx } };
 };
 
 // Layers, bottom → top:  room  ·  back fx  ·  person cutout  ·  front fx  ·  cutaways  ·  grade
@@ -98,34 +101,6 @@ function camera(edit: Edit, frame: number, fps: number) {
   }
   return { s, rx, ry, rz, x, blur };
 }
-
-// Which sound each effect makes when it lands (public/sfx, generated with ElevenLabs).
-const SFX: Partial<Record<Fx["type"], [string, number]>> = {
-  behind: ["whoosh", 0.35], pop: ["pop", 0.55], halo: ["swish", 0.4], card: ["pop", 0.5], orbit: ["swish", 0.35],
-  ribbon: ["swish", 0.5], film: ["whoosh", 0.4], search: ["type", 0.45], quote: ["pop", 0.45], broll: ["whoosh", 0.55],
-  shake: ["impact", 0.5], whip: ["whoosh", 0.6], counter: ["tick", 0.5], checklist: ["tick", 0.55], chat: ["ding", 0.45],
-  progress: ["pop", 0.45], chart: ["riser", 0.4], particles: ["riser", 0.3], title: ["whoosh", 0.6], outline: ["swish", 0.45],
-};
-
-const Sounds: React.FC<{ edit: Edit }> = ({ edit }) => {
-  const { fps } = useVideoConfig();
-  const out: React.ReactNode[] = [];
-  edit.fx.forEach((fx, i) => {
-    const from = Math.round(fx.at * fps);
-    const level = edit.sfxVolume ?? 1;
-    if (fx.type === "sfx") {
-      out.push(<Sequence key={i} from={from} layout="none"><Audio src={staticFile(`sfx/${fx.name}.mp3`)} volume={(fx.volume ?? 0.6) * level} /></Sequence>);
-      return;
-    }
-    if (edit.sfx === false) return;
-    const snd = SFX[fx.type];
-    if (!snd) return;
-    // a checklist ticks once per item
-    const hits = fx.type === "checklist" ? fx.items.map((_, j) => from + j * Math.max(5, Math.min(10, Math.floor((fx.dur * fps - 10) / fx.items.length))) + 5) : [from];
-    hits.forEach((h, j) => out.push(<Sequence key={`${i}-${j}`} from={h} layout="none"><Audio src={staticFile(`sfx/${snd[0]}.mp3`)} volume={snd[1] * level} /></Sequence>));
-  });
-  return <>{out}</>;
-};
 
 // Word-by-word captions, 1–3 words per chunk, the spoken word lights up.
 function chunks(words: Word[]) {
@@ -229,7 +204,7 @@ const Outline: React.FC<{ edit: Edit; slug: string }> = ({ edit, slug }) => {
   );
 };
 
-export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, track }) => {
+export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, track, sfx }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const plan = useMemo(() => (edit && words ? captionPlan(words, edit) : []), [edit, words]);
@@ -264,7 +239,8 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, 
       <Layer edit={edit} meta={meta} track={track} side="over" />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,${g.vignette}) 100%)`, pointerEvents: "none" }} />
       <Grain />
-      <Sounds edit={edit} />
+      <Sounds edit={edit} index={sfx ?? {}} plan={plan} gain={voiceGain(meta)} />
+      {edit.music ? <Music music={edit.music} words={words} gain={voiceGain(meta)} /> : null}
       {safe ? <SafeOverlay platform={safe} /> : null}
     </AbsoluteFill>
     </SafeProvider>

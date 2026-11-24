@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { measure } from "./audio.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const W = 1080, H = 1920, FPS = 30;
@@ -162,7 +163,7 @@ function main() {
 
   fs.writeFileSync(path.join(dir, "track.json"), JSON.stringify(smoothTrack(JSON.parse(fs.readFileSync(path.join(masks, "track.json"), "utf8")))));
 
-  const meta = { slug, duration: probe(base).duration, fps: FPS, width: W, height: H, face: facePx(box, up, c), source: path.resolve(src) };
+  const meta = { slug, duration: probe(base).duration, fps: FPS, width: W, height: H, face: facePx(box, up, c), lufs: measure(base) ?? undefined, source: path.resolve(src) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
   console.log(`done → public/${slug}/  (${words.length} words: ${words.map((w) => w.w).join(" ")})`);
 }

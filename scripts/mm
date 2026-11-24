@@ -7,6 +7,8 @@
 #   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult] [--safe [reels|tiktok|shorts|all]]
 #   mm render <slug> [--wrap showcase,chat,prompt|all] [--safe [platform]]   --safe = preview with the app UI on top
 #   mm safezones                      export the safe-zone templates (transparent PNG) to <workspace>/out/safe-zones/
+#   mm sfx <pack folder | Yandex Disk link>   build the sound library (public/sfx) from your sound pack
+#   mm music <slug> <track> [--start <sec>] [--volume 0.4] [--duck 0.2]   music bed, ducked under the voice
 #   mm looks                          list looks
 #   mm studio                         open Remotion Studio
 #   mm home                           print the workspace path
@@ -57,17 +59,19 @@ setup() {
 
 cmd="${1:-help}"; shift || true
 case "$cmd" in
-  doctor) setup; say "ready → $WS" ;;
+  doctor) setup; [ -s "$WS/public/sfx/index.json" ] || say "no sounds yet: run  mm sfx <your sound pack folder or Yandex Disk link>  (renders are silent fx until then)"; say "ready → $WS" ;;
   home) echo "$WS" ;;
   looks) setup; cd "$WS" && node -e 'import("./tools/looks.mjs").then(m=>{for(const [k,v] of Object.entries(m.LOOKS))console.log(k.padEnd(8),v.accent,v.captionStyle.padEnd(6),"—",v.label)})' ;;
   prep) setup; cd "$WS" && node tools/prep.mjs "$@" ;;
   plan) setup; cd "$WS" && node tools/plan.mjs "$@" ;;
   still) setup; slug="$1"; sec="$2"; shift 2; cd "$WS" && node tools/render.mjs "$slug" --still "$sec" "$@" ;;
   render) setup; cd "$WS" && node tools/render.mjs "$@" ;;
+  music) setup; cd "$WS" && node tools/audio.mjs music "$@" ;;
+  sfx) setup; cd "$WS" && node tools/sfx.mjs "$@" ;;
   safezones) setup; cd "$WS" && mkdir -p out/safe-zones && for p in reels tiktok shorts all; do
       npx remotion still src/index.ts SafeZone "out/safe-zones/$p.png" --props="{\"platform\":\"$p\"}" --image-format=png >/dev/null 2>&1 && echo "→ $WS/out/safe-zones/$p.png"
     done ;;
   studio) setup; cd "$WS" && npx remotion studio src/index.ts ;;
   test) setup; cd "$WS" && node --test tools/*.test.mjs ;;
-  *) sed -n '2,15p' "$0" ;;
+  *) sed -n '2,17p' "$0" ;;
 esac

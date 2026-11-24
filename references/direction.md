@@ -77,7 +77,8 @@ Intensity knobs, per look:
 - **beat gap** (`gap`): hype 0.85 s ↔ calm 1.8 s. Never two effects starting within 0.4 s except camera + its effect.
 - **camera**: `shake` is loud — max every 2nd beat (hype), never in calm/luxury.
 - **обводки**: 1–3 per reel. **перебивки**: hype/sell every 3–4 s, podcast every ~3 s, calm 1–2 total.
-- **sound** (`sfxVolume`): hype 1.0, sell 0.9, podcast 0.7, luxury 0.6, calm 0.5. Over music or a loud voice track, drop 0.2.
+- **sound** (`sfxVolume`): hype 1.0, sell 0.9, podcast 0.7, luxury 0.6, calm 0.5. With a music bed, drop 0.2.
+- **music** (`mm music`): 0.4 in pauses / 0.2 under the voice is the default; calm and luxury 0.3 / 0.15; hype 0.5 / 0.25. Start the track where its chorus or drop meets the reel's turn (offer, the speaker on camera, the final call).
 
 ## 6. Three worked briefs
 

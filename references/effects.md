@@ -9,6 +9,7 @@
   "captionBehind": true,                       // mix: false = no caption word behind the person
   "platform": "all",                           // safe zone: "reels" | "tiktok" | "shorts" | "all" (union, default)
   "sfx": true, "sfxVolume": 0.7,
+  "music": { "src": "x/music.mp3", "volume": 0.4, "duck": 0.2 },  // written by `mm music`
   "grade": { "contrast": 1.1, "saturate": 0.95, "brightness": 0.96, "vignette": 0.6 },
   "fx": [ { "type": "...", "at": 1.25, "dur": 0.8, ... } ]
 }
@@ -40,7 +41,7 @@
 | `whip` | camera | `dir?` 1/-1 | 0.1 s before a broll or scene change, `dur` 0.2 |
 | `outline` | between room and person | `style?` neon/sticker/rim, `color?` | обводка: hook, punch line, around popping photos |
 | `title` | over all | `text`, `kicker?`, `kickerStyle?` caps/serif, `path?` ["1A","1B"], `bg?` | перебивка: a new thought, a step list, a big claim |
-| `sfx` | audio | `name`, `volume?` | extra hits |
+| `sfx` | audio | `name` (library: whoosh-1…4, whoosh-big/-sharp/-camera/-click/-chimes, riser, riser-short, riser-metal, impact-1/-2/-bell, hit-1…4, click-1…3, click-crispy, beep-1…3, ui-1…4, build-1/2, pop-1…4, notify, type, counter, toggle, zoom, transform-1/2, rubber, blur-out, hud, tech, success), `volume?` | extra hits |
 
 Layout slots — all inside the safe zone of `platform` (`engine/src/safe-zones.json`; `all` = x 60–888, y 220–1436), placed by the engine, not by hand:
 - top third: `behind` word (on the head, never above the safe top), `film`

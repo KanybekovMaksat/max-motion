@@ -36,7 +36,9 @@ Read before directing an edit:
 
 ## Notes
 
-- Sounds are in `engine/public/sfx/` (whoosh, pop, click, ding, impact, swish, tick, type, riser); each effect plays its own, `sfxVolume` scales them, `{type:"sfx",name,at}` adds one. More sounds: ElevenLabs `POST /v1/sound-generation` if the user has `ELEVENLABS_API_KEY`.
+- **Sound.** The skill ships no audio. Build the library once from the user's sound pack: `mm sfx <pack folder | public Yandex Disk link>` → `public/sfx/*.mp3` + `index.json` (names and which pack file each comes from: `engine/tools/sfx.mjs`). Every effect plays its own layers (`engine/src/sound.tsx`): whooshes and risers are placed by their peak, repeats rotate variants, checklists tick per item, caption words going behind the head get a soft whoosh. `sfxVolume` scales them (0.6–0.9), `{type:"sfx",name,at}` adds one by library name.
+- **Music.** `mm music <slug> <track> [--start <sec>] [--volume 0.4] [--duck 0.2]` → `public/<slug>/music.mp3`, levelled to the voice; plays at `volume` in pauses and ducks to `duck` under speech. Pick `--start` so the drop or chorus lands on the reel's main moment.
+- **Levels.** Sounds and music follow the voice loudness (`meta.lufs`), the render masters the reel to −14 LUFS. Aim for the voice ≥ 9 dB over music + sounds; if it's busy, lower `sfxVolume` before touching the music.
 - Examples of tuned edits: `engine/examples/*/edit.json` (their `assets/…` photos are the author's and are not shipped — swap in your own).
 - `public/<slug>` files must be real files, not symlinks (Remotion drops symlinks) — copy with `cp -c`.
 - No speech → the plan is empty; direct it from the picture.
