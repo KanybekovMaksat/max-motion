@@ -67,6 +67,8 @@ Map the content first, then fill the rest from the look's cycle.
 | a question, someone's words | `chat` |
 | a goal, a result, readiness | `progress` or `card` with a ✓ badge |
 | a place, a product, "look at this" | `pop` photos (+ `sticker` outline) or `broll` with a `whip` before |
+| a thing or an idea ("идея", "команда", "единорог", "время") | `sticker` — a real 3D icon next to the head, not a card with the word on it; a list of wrong answers ("не идея, не команда, не технология") = stickers that `strike` on the "нет" |
+| an image in the speech ("свет в конце туннеля") | `broll` with a real photo, 1–1.5 s |
 | growth, decline, statistics | `chart` |
 | the world, AI, data, "everyone" | `particles` globe |
 | social networks, apps | `orbit` |
@@ -80,6 +82,15 @@ Intensity knobs, per look:
 - **обводки**: 1–3 per reel. **перебивки**: hype/sell every 3–4 s, podcast every ~3 s, calm 1–2 total.
 - **sound** (`sfxVolume`): 1.0 with the accent rules below; calm/luxury 0.8.
 - **music** (`mm music`): 0.4 in pauses / 0.2 under the voice is the default; calm and luxury 0.3 / 0.15; hype 0.5 / 0.25. Start the track where its chorus or drop meets the reel's turn (offer, the speaker on camera, the final call).
+
+## 5b. Expert / podcast format (the @eightsenses podcast references)
+
+The picture carries the meaning, text is the minimum:
+- **Concept word behind the head** on most key phrases: condensed metal word + small kicker ("build an **EMPIRE**" → «кто **ВЫЖИВАЕТ**», «лучше **БЫСТРЕЕ**»), `captionBehind: false` so captions don't add their own.
+- **Real visuals, not interface**: `sticker` 3D icons for things and ideas, `broll` real photos for images in the speech, `pop` photos, `particles` globe for "world / everyone". Text cards (`card`, `progress`, `checklist`) only for a real number or offer.
+- Icons: Microsoft Fluent Emoji 3D (MIT) — `https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/<Name>/3D/<name>_3d.png` (e.g. `Light bulb/3D/light_bulb_3d.png`) → `public/assets/icons/`. Photos: Wikimedia Commons API (free licences, keep a `CREDITS.md` next to them) → crop 9:16 → `public/assets/photos/`.
+- One title card at the turn of the argument, dark room grade (`grade.room`), sound between "structure" and "every meaning".
+- Check every reel by ear: transcribe the render and compare with the source — no word may be lost.
 
 ## 6. Three worked briefs
 

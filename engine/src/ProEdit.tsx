@@ -1,23 +1,25 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, CalculateMetadataFunction, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { SANS } from "./fonts";
-import { Backlight, Behind, Broll, Card, Film, Grain, Halo, Orbit, Pop, Quote, Rays, Ribbon, Search } from "./fx";
+import { Backlight, Behind, Broll, Card, Film, Grain, Halo, Orbit, Pop, Quote, Rays, Ribbon, Search, Sticker } from "./fx";
 import { Chart, Chat, Checklist, CleanCaptions, Counter, Particles, Progress, SerifCaptions, Title, WordCaptions } from "./fx2";
 import { CaptionBack, MixCaptions, captionPlan } from "./captions";
 import { Music, Sounds, voiceGain, type SfxIndex } from "./sound";
 import { SafeOverlay, SafeProvider, useSafe, zoneOf, type Platform } from "./safe";
 import { envelope, pop } from "./time";
-import type { Edit, Fx, Head, Meta, Word } from "./types";
+import type { Edit, Face, Fx, Head, Meta, Word } from "./types";
 
 // `safe` draws the app UI of that platform over the video (preview only, never in the final render)
-export type ProEditData = { slug: string; editFile?: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[]; sfx?: SfxIndex };
+export type ProEditData = { slug: string; editFile?: string; safe?: Platform; meta?: Meta; edit?: Edit; words?: Word[]; track?: Head[]; faces?: (Face | null)[]; sfx?: SfxIndex };
 
 export const calcProEdit: CalculateMetadataFunction<ProEditData> = async ({ props }) => {
   const get = async <T,>(f: string): Promise<T> => (await fetch(staticFile(`${props.slug}/${f}`))).json();
   const [meta, edit, words, track] = await Promise.all([get<Meta>("meta.json"), get<Edit>(props.editFile ?? "edit.json"), get<Word[]>("words.json"), get<Head[]>("track.json")]);
   // the sound library is built by `mm sfx`; without it the reel renders silent fx
   const sfx = await fetch(staticFile("sfx/index.json")).then((r) => (r.ok ? (r.json() as Promise<SfxIndex>) : {})).catch(() => ({}));
-  return { durationInFrames: Math.floor(meta.duration * meta.fps), fps: meta.fps, width: meta.width, height: meta.height, props: { ...props, meta, edit, words, track, sfx } };
+  // per-frame face boxes (clips prepped before faces.json existed fall back to the head track)
+  const faces = await fetch(staticFile(`${props.slug}/faces.json`)).then((r) => (r.ok ? (r.json() as Promise<(Face | null)[]>) : [])).catch(() => []);
+  return { durationInFrames: Math.floor(meta.duration * meta.fps), fps: meta.fps, width: meta.width, height: meta.height, props: { ...props, meta, edit, words, track, faces, sfx } };
 };
 
 // Layers, bottom → top:  room  ·  back fx  ·  person cutout  ·  front fx  ·  cutaways  ·  vignette  ·  captions
@@ -27,12 +29,13 @@ const OVER = new Set<Fx["type"]>(["broll", "chart", "title"]);
 // these render twice: once under the person, once over
 const BOTH = new Set<Fx["type"]>(["orbit", "ribbon"]);
 
-type FxProps = { face: Meta["face"]; accent: string; len: number; head: (f: number) => Head };
+type FxProps = { face: Meta["face"]; accent: string; len: number; head: (f: number) => Head; faceAt: (f: number) => Face };
 
 function render(fx: Fx, props: FxProps, side: "back" | "front") {
   switch (fx.type) {
     case "behind": return <Behind fx={fx} {...props} />;
     case "pop": return <Pop fx={fx} {...props} />;
+    case "sticker": return <Sticker fx={fx} {...props} />;
     case "halo": return <Halo fx={fx} {...props} />;
     case "card": return <Card fx={fx} {...props} />;
     case "orbit": return <Orbit fx={fx} {...props} side={side} />;
@@ -55,20 +58,30 @@ function render(fx: Fx, props: FxProps, side: "back" | "front") {
 }
 
 const headAt = (track: Head[], frame: number): Head => track[Math.min(track.length - 1, Math.max(0, Math.round(frame)))] ?? { top: 420, x: 540 };
+// the face at a frame: the Vision box, else one built from the head track and the clip's face size
+const faceOf = (faces: (Face | null)[], track: Head[], meta: Meta, frame: number): Face => {
+  const f = faces[Math.min(faces.length - 1, Math.max(0, Math.round(frame)))];
+  if (f) return f;
+  const h = headAt(track, frame);
+  return { x: h.x, y: h.top + meta.face.h * 0.55, w: meta.face.w, h: meta.face.h };
+};
 
-const Layer: React.FC<{ edit: Edit; meta: Meta; track: Head[]; side: "back" | "front" | "over" }> = ({ edit, meta, track, side }) => {
+const Layer: React.FC<{ edit: Edit; meta: Meta; track: Head[]; faces: (Face | null)[]; side: "back" | "front" | "over" }> = ({ edit, meta, track, faces, side }) => {
   const { fps } = useVideoConfig();
   return (
     <>
       {edit.fx.map((fx, i) => {
-        const inLayer =
-          side === "over" ? OVER.has(fx.type) : side === "back" ? BACK.has(fx.type) || BOTH.has(fx.type) : FRONT.has(fx.type) || BOTH.has(fx.type);
+        // a sticker sits in front of the person unless it says `behind`
+        const sticker = fx.type === "sticker" ? (fx.behind ? "back" : "front") : null;
+        const inLayer = sticker
+          ? sticker === side
+          : side === "over" ? OVER.has(fx.type) : side === "back" ? BACK.has(fx.type) || BOTH.has(fx.type) : FRONT.has(fx.type) || BOTH.has(fx.type);
         if (!inLayer) return null;
         const from = Math.round(fx.at * fps);
         const len = Math.max(1, Math.round(fx.dur * fps));
         return (
           <Sequence key={i} from={from} durationInFrames={len} layout="none">
-            <AbsoluteFill>{render(fx, { face: meta.face, accent: edit.accent, len, head: (f) => headAt(track, from + f) }, side === "front" ? "front" : "back")}</AbsoluteFill>
+            <AbsoluteFill>{render(fx, { face: meta.face, accent: edit.accent, len, head: (f) => headAt(track, from + f), faceAt: (f) => faceOf(faces, track, meta, from + f) }, side === "front" ? "front" : "back")}</AbsoluteFill>
           </Sequence>
         );
       })}
@@ -204,7 +217,7 @@ const Outline: React.FC<{ edit: Edit; slug: string }> = ({ edit, slug }) => {
   );
 };
 
-export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, track, sfx }) => {
+export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, track, faces = [], sfx }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const plan = useMemo(() => (edit && words ? captionPlan(words, edit) : []), [edit, words]);
@@ -229,15 +242,15 @@ export const ProEdit: React.FC<ProEditData> = ({ slug, safe, meta, edit, words, 
         <AbsoluteFill style={{ filter: room, transform: r?.blur ? "scale(1.02)" : undefined }}>
           <OffthreadVideo src={staticFile(`${slug}/base.mp4`)} />
         </AbsoluteFill>
-        <Layer edit={edit} meta={meta} track={track} side="back" />
+        <Layer edit={edit} meta={meta} track={track} faces={faces} side="back" />
         {mix ? <CaptionBack plan={plan} accent={edit.accent} head={(f) => headAt(track, f)} /> : null}
         <Outline edit={edit} slug={slug} />
         <AbsoluteFill style={{ filter: grade }}>
           <OffthreadVideo src={staticFile(`${slug}/fg.webm`)} transparent muted />
         </AbsoluteFill>
       </AbsoluteFill>
-      <Layer edit={edit} meta={meta} track={track} side="front" />
-      <Layer edit={edit} meta={meta} track={track} side="over" />
+      <Layer edit={edit} meta={meta} track={track} faces={faces} side="front" />
+      <Layer edit={edit} meta={meta} track={track} faces={faces} side="over" />
       <AbsoluteFill style={{ background: `radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,${g.vignette}) 100%)`, pointerEvents: "none" }} />
       {/* captions over every layer: no card, title card or cutaway can cover them */}
       {edit.captions ? <CaptionLayer style={style} words={words} accent={edit.accent} plan={plan} /> : null}

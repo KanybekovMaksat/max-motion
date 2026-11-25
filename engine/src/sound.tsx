@@ -42,6 +42,7 @@ const RULES: Partial<Record<Fx["type"], Rule>> = {
   // decoration — silent unless the effect has `sound: true`
   behind: { prio: 4, auto: no, layers: [{ name: "whoosh-1", vol: 0.35, at: 0.12, peak: true }] },
   pop: { prio: 4, auto: no, layers: [{ name: "pop-1", vol: 0.4 }] },
+  sticker: { prio: 4, auto: no, layers: [{ name: "pop-2", vol: 0.35 }] },
   halo: { prio: 4, auto: no, layers: [{ name: "whoosh-chimes", vol: 0.35, at: 0.15, peak: true }] },
   orbit: { prio: 4, auto: no, layers: [{ name: "transform-1", vol: 0.35 }] },
   punch: { prio: 4, auto: no, layers: [{ name: "zoom", vol: 0.3 }] },

@@ -21,6 +21,7 @@
 |---|---|---|---|
 | `behind` | under person | `text`, `kicker?`, `font?` sans/serif/cond, `color?`, `y?` | the key noun of a phrase |
 | `pop` | under | `images[]` (1–4) | places, products, "photos" |
+| `sticker` | over (or under with `behind`) | `src` (3D icon / cut-out PNG), `pos?` left/right/top-left/top-right/low-left/low-right, `size?` 220–300, `strike?` s after start → greyed + crossed, `label?` | **a thing or idea named in speech — instead of a text card**: idea 💡, team, robot, unicorn, stopwatch; placed off the face shot by shot (`faces.json`) |
 | `halo` | under | `color?` | hook, "sold", a win |
 | `orbit` | both | `icons[]`: instagram tiktok youtube telegram whatsapp claude python js | social, platforms, tools |
 | `ribbon` | both | `color?` | brand moment, intro |

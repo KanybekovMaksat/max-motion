@@ -4,11 +4,11 @@ import { COND, SANS, SERIF } from "./fonts";
 import { AppIcon } from "./icons";
 import { useKeepOut, useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
-import type { Face, Fx, Head } from "./types";
+import type { Face, Fx, Head, StickerPos } from "./types";
 
 // Every effect renders inside its own <Sequence>, so useCurrentFrame() is 0 at the effect start.
 // `head(f)` = head position at local frame f of the effect (follows the person).
-type P<T extends Fx["type"]> = { fx: Extract<Fx, { type: T }>; face: Face; accent: string; len: number; head: (f: number) => Head };
+type P<T extends Fx["type"]> = { fx: Extract<Fx, { type: T }>; face: Face; accent: string; len: number; head: (f: number) => Head; faceAt: (f: number) => Face };
 
 const src = (s: string) => (/^(https?:|data:)/.test(s) ? s : staticFile(s));
 const isVideo = (s: string) => /\.(mp4|mov|webm)$/i.test(s);
@@ -133,6 +133,73 @@ export const Pop: React.FC<P<"pop">> = ({ fx, len, head }) => {
           </div>
         );
       })}
+    </AbsoluteFill>
+  );
+};
+
+// ── STICKER: a real picture (3D icon, cut-out PNG) pops next to the head on its word ──
+// spring in with a twist, floats, scales out; `strike` greys it out and draws a red line across.
+// Placed around the head (in face widths), kept inside the safe box and above the caption band.
+const STICKER_AT: Record<StickerPos, [number, number]> = {
+  left: [-1, 0.2], right: [1, 0.2], "top-left": [-0.85, -0.6], "top-right": [0.85, -0.6], "low-left": [-1.05, 1.05], "low-right": [1.05, 1.05],
+};
+export const Sticker: React.FC<P<"sticker">> = ({ fx, len, faceAt }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const S = useSafe();
+  const floor = useKeepOut();
+  const size = fx.size ?? 280;
+  // the face where it appears; the spot must stay clear of the face for its whole life (a shot may change)
+  const c = faceAt(0);
+  const seen = [0, Math.floor(len / 2), len - 1].map(faceAt);
+  const place = (p: StickerPos) => {
+    const [kx, ky] = STICKER_AT[p];
+    const x = Math.min(1080 - S.right - size / 2, Math.max(S.left + size / 2, c.x + kx * (c.w * 0.75 + size * 0.5)));
+    const y = Math.min(floor - size / 2 - 10, Math.max(S.top + size / 2, c.y + ky * c.h * 1.1));
+    // overlap with the face and hairline (cheek to cheek, forehead to chin), px², summed over its life
+    const hit = seen.reduce((sum, q) => {
+      const ox = Math.max(0, Math.min(x + size * 0.42, q.x + q.w * 0.6) - Math.max(x - size * 0.42, q.x - q.w * 0.6));
+      const oy = Math.max(0, Math.min(y + size * 0.42, q.y + q.h * 0.6) - Math.max(y - size * 0.42, q.y - q.h * 0.8));
+      return sum + ox * oy;
+    }, 0);
+    return { x, y, kx, hit };
+  };
+  // the asked-for spot unless it covers the face (pushed against the screen edge, a head off-centre):
+  // then the mirrored spot, then the top corners, then the least bad one
+  const want = fx.pos ?? "right";
+  const mirror = (want.includes("left") ? want.replace("left", "right") : want.replace("right", "left")) as StickerPos;
+  const tries = [want, mirror, "top-left", "top-right", "low-left", "low-right"].map((p) => place(p as StickerPos));
+  const spot = tries.find((t) => t.hit === 0) ?? tries.reduce((a, b) => (b.hit < a.hit ? b : a));
+  const { x: cx, y: cy, kx } = spot;
+  const p = pop(f, fps, 0, 11, 260);
+  const out = envelope(f, 0, len, 1, 6);
+  const tilt = fx.tilt ?? (kx < 0 ? -8 : 8);
+  const struck = fx.strike !== undefined ? clamp01((f - fx.strike * fps) / 6) : 0;
+  return (
+    <AbsoluteFill>
+      <div
+        style={{
+          position: "absolute",
+          left: cx - size / 2,
+          top: cy - size / 2,
+          width: size,
+          height: size,
+          opacity: clamp01(p * 2) * out,
+          transform: `translateY(${Math.sin((f + size) / 13) * 7}px) scale(${(0.2 + 0.8 * p) * (0.85 + 0.15 * out)}) rotate(${tilt * p + (1 - p) * -30}deg)`,
+        }}
+      >
+        <Img src={src(fx.src)} style={{ width: "100%", height: "100%", objectFit: "contain", filter: `drop-shadow(0 22px 34px rgba(0,0,0,.55)) grayscale(${struck}) brightness(${1 - 0.35 * struck})` }} />
+        {struck > 0 ? (
+          <svg width={size} height={size} style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+            <line x1={size * 0.08} y1={size * 0.92} x2={size * 0.08 + size * 0.84 * struck} y2={size * 0.92 - size * 0.84 * struck} stroke="#FF3D57" strokeWidth={size * 0.07} strokeLinecap="round" />
+          </svg>
+        ) : null}
+        {fx.label ? (
+          <div style={{ position: "absolute", left: "50%", top: size * 0.98, transform: "translateX(-50%)", whiteSpace: "nowrap", fontFamily: SANS, fontWeight: 600, fontSize: 30, color: "#fff", letterSpacing: -0.3, textShadow: "0 2px 12px rgba(0,0,0,.6)" }}>
+            {fx.label}
+          </div>
+        ) : null}
+      </div>
     </AbsoluteFill>
   );
 };

@@ -8,7 +8,7 @@ import { CAPTION_H, useKeepOut, useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
 import type { Face, Fx, Head, Word } from "./types";
 
-type P<T extends Fx["type"]> = { fx: Extract<Fx, { type: T }>; face: Face; accent: string; len: number; head: (f: number) => Head };
+type P<T extends Fx["type"]> = { fx: Extract<Fx, { type: T }>; face: Face; accent: string; len: number; head: (f: number) => Head; faceAt: (f: number) => Face };
 
 const glass: React.CSSProperties = {
   background: "rgba(255,255,255,.86)",

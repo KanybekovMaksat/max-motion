@@ -55,12 +55,11 @@ test("cropFor keeps the face inside a 9:16 window", () => {
   assert.ok(f.x > 0 && f.x < 1080);
 });
 
-test("keepSegments merges close words and drops long pauses", async () => {
-  const { keepSegments } = await import("./prep.mjs");
-  const segs = keepSegments([W("a", 0.5, 0.9), W("b", 1.0, 1.3), W("c", 2.5, 2.9)], 4);
-  assert.equal(segs.length, 2);
-  assert.deepEqual(segs[0], [0.42, 1.42]);
-  assert.ok(segs[1][0] > 2.3 && segs[1][1] < 3.1);
+test("pause cut keeps everything but the inside of real silences", async () => {
+  const { keepFromSilences } = await import("./prep.mjs");
+  // a 1 s pause shrinks to 0.24 s, a 0.25 s breath stays, the end is kept
+  const segs = keepFromSilences([[1.0, 2.0], [3.0, 3.25]], 5);
+  assert.deepEqual(segs, [[0, 1.12], [1.88, 5]]);
 });
 
 test("planEdit cycles through title cards, sticker outlines and ribbons", () => {
@@ -127,4 +126,21 @@ test("trim: cut spans drop their words and shift the rest", async () => {
   assert.equal(remap(2.5, keep), null);
   const w = trimWords([W("a", 1, 1.5), W("b", 2.2, 2.6), W("c", 6.5, 7)], keep);
   assert.deepEqual(w.map((x) => [x.w, x.s]), [["a", 1], ["c", 4.5]]);
+});
+
+test("reframe ranges move out to the nearest pause", async () => {
+  const { snapRanges } = await import("./reframe.mjs");
+  // whisper said 10.5–20.0; the speech really runs 9.95–20.4 (pauses end at 9.95, start at 20.4)
+  const r = snapRanges([[10.5, 20.0]], [[9.5, 9.95], [20.4, 21.0]]);
+  assert.deepEqual(r, [[9.85, 20.5]]);
+  // no pause nearby: a small safety margin
+  assert.deepEqual(snapRanges([[5, 6]], []), [[4.9, 6.1]]);
+});
+
+test("face samples become one box per frame, biggest face, nearest sample", async () => {
+  const { denseFaces } = await import("./prep.mjs");
+  const d = denseFaces([[0, [[0.5, 0.3, 0.1, 0.1], [0.2, 0.3, 0.3, 0.2]]], [5, []], [10, [[0.6, 0.4, 0.2, 0.1]]]], 40);
+  assert.deepEqual(d[0], { x: 216, y: 576, w: 324, h: 384 });
+  assert.equal(d[6].x, 648); // nearest real sample is frame 10
+  assert.equal(d[39], null); // too far from any sample
 });

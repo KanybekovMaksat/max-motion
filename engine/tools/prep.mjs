@@ -4,7 +4,7 @@
 //   words.json  word timings from whisper.cpp
 //   meta.json   duration, face box
 // usage: npm run prep -- <video> <slug> [--lang ru|en|auto]
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,6 +57,17 @@ export function smoothTrack(raw, win = 5) {
   });
 }
 
+// Vision face samples (every 5th frame: [frame, [[cx, cy, w, h], …]] normalized) -> one box per
+// frame in output px {x, y (centre), w, h} of the biggest face, or null; gaps take the nearest sample
+export function denseFaces(samples, frames, W = 1080, H = 1920) {
+  const big = samples.map(([f, fs]) => [f, fs.length ? fs.reduce((a, b) => (b[2] > a[2] ? b : a)) : null]);
+  return Array.from({ length: frames }, (_, f) => {
+    let best = null, d = Infinity;
+    for (const [sf, b] of big) if (b && Math.abs(sf - f) < d) (d = Math.abs(sf - f)), (best = b);
+    return best && d <= 15 ? { x: Math.round(best[0] * W), y: Math.round(best[1] * H), w: Math.round(best[2] * W), h: Math.round(best[3] * H) } : null;
+  });
+}
+
 // whisper.cpp -ml 1 JSON -> [{w, s, e}] in seconds, punctuation glued to its word.
 export function parseWords(whisperJson) {
   const out = [];
@@ -81,23 +92,42 @@ export function parseWords(whisperJson) {
   return out;
 }
 
-// Spoken stretches to keep when cutting pauses: words padded a little, gaps over `gap` seconds dropped.
-export function keepSegments(words, duration, gap = 0.3, pad = 0.08) {
-  const segs = [];
-  for (const w of words) {
-    const s = Math.max(0, w.s - pad), e = Math.min(duration, w.e + pad + 0.04);
-    const last = segs[segs.length - 1];
-    if (last && s - last[1] <= gap) last[1] = Math.max(last[1], e);
-    else segs.push([s, e]);
+// Stretches to keep when cutting pauses. The pauses come from the audio itself (silencedetect),
+// never from whisper's word times: whisper drops repeated phrases ("переформатировать и принять,
+// потом переформатировать") and misplaces word edges by up to half a second, and cutting on them
+// swallows real speech. Each pause keeps `pad` seconds on both sides.
+export function keepFromSilences(silences, duration, pad = 0.12) {
+  const keep = [];
+  let t = 0;
+  for (const [s, e] of silences) {
+    const a = s + pad, b = e - pad;
+    if (b - a < 0.08) continue; // too short to be worth a cut
+    if (a > t) keep.push([t, a]);
+    t = b;
   }
-  return segs.map(([s, e]) => [Math.round(s * 1000) / 1000, Math.round(e * 1000) / 1000]);
+  if (t < duration) keep.push([t, duration]);
+  return keep.map(([s, e]) => [Math.round(s * 1000) / 1000, Math.round(e * 1000) / 1000]);
+}
+
+// pauses [[start, end], …] longer than `min` s, quieter than `noise` dB
+export function silences(file, noise = -40, min = 0.3) {
+  const r = spawnSync("ffmpeg", ["-nostats", "-i", file, "-vn", "-af", `silencedetect=n=${noise}dB:d=${min}`, "-f", "null", "-"], { encoding: "utf8" });
+  const out = [];
+  let s = null;
+  for (const m of (r.stderr ?? "").matchAll(/silence_(start|end): (-?[\d.]+)/g)) {
+    if (m[1] === "start") s = Math.max(0, Number(m[2]));
+    else if (s !== null) out.push([s, Number(m[2])]), (s = null);
+  }
+  return out;
 }
 
 export function transcribe(base, tmp, lang) {
   const wav = path.join(tmp, "a.wav");
   ff(["-i", base, "-ar", "16000", "-ac", "1", wav]);
   const model = path.join(ROOT, "models", "ggml-small.bin");
-  run("whisper-cli", ["-m", model, "-l", lang, "-ml", "1", "-sow", "-oj", "-of", path.join(tmp, "w"), "-np", wav]);
+  // -mc 0: no previous text as context — with it whisper drops repeated phrases ("потом
+  // переформатировать и принять, потом переформатировать") and the captions miss words
+  run("whisper-cli", ["-m", model, "-l", lang, "-ml", "1", "-sow", "-mc", "0", "-oj", "-of", path.join(tmp, "w"), "-np", wav]);
   return parseWords(JSON.parse(fs.readFileSync(path.join(tmp, "w.json"), "utf8")));
 }
 
@@ -136,7 +166,9 @@ function main() {
   let words = info.hasAudio ? transcribe(base, tmp, lang) : [];
   if (argv.includes("--cut") && words.length) {
     const dur = probe(base).duration;
-    const keep = keepSegments(words, dur);
+    // silence threshold follows the voice: 16 dB under its loudness (a quiet room mic ≈ -40 dB)
+    const lufs = measure(base) ?? -24;
+    const keep = keepFromSilences(silences(base, Math.max(-50, Math.min(-30, Math.round(lufs - 16)))), dur);
     const kept = keep.reduce((a, [s, e]) => a + e - s, 0);
     if (dur - kept > 0.25) {
       console.log(`   cut pauses: ${dur.toFixed(2)}s → ${kept.toFixed(2)}s`);
@@ -161,7 +193,10 @@ function main() {
     path.join(dir, "fg.webm"),
   ]);
 
-  fs.writeFileSync(path.join(dir, "track.json"), JSON.stringify(smoothTrack(JSON.parse(fs.readFileSync(path.join(masks, "track.json"), "utf8")))));
+  const track = smoothTrack(JSON.parse(fs.readFileSync(path.join(masks, "track.json"), "utf8")));
+  fs.writeFileSync(path.join(dir, "track.json"), JSON.stringify(track));
+  // per-frame face boxes: stickers and cards keep off the face, shot by shot
+  fs.writeFileSync(path.join(dir, "faces.json"), JSON.stringify(denseFaces(JSON.parse(run(path.join(ROOT, "tools", "matte"), ["faces", base])), track.length)));
 
   const meta = { slug, duration: probe(base).duration, fps: FPS, width: W, height: H, face: facePx(box, up, c), lufs: measure(base) ?? undefined, source: path.resolve(src) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));

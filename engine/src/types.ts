@@ -65,6 +65,9 @@ export type Fx =
   | (Base & { type: "progress"; title: string })
   // dot globe / dot grid behind the head
   | (Base & { type: "particles"; shape?: "globe" | "grid" })
+  // a real picture instead of a text card: a 3D icon / cut-out PNG pops next to the head on its word;
+  // strike = seconds after the start when it greys out and gets crossed; behind = under the person
+  | (Base & { type: "sticker"; src: string; pos?: StickerPos; size?: number; tilt?: number; strike?: number; label?: string; behind?: boolean })
   // line chart drawing itself, full card
   | (Base & { type: "chart"; label?: string; trend?: "up" | "down" })
   // outline around the person's silhouette: neon tube, white sticker edge or soft rim light
@@ -77,6 +80,7 @@ export type Fx =
   | (Base & { type: "sfx"; name: string; volume?: number; peak?: boolean });
 
 export type FxType = Fx["type"];
+export type StickerPos = "left" | "right" | "top-left" | "top-right" | "low-left" | "low-right";
 
 export type Edit = {
   slug: string;

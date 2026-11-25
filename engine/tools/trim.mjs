@@ -1,5 +1,5 @@
 // Cut spans out of a prepped clip without prepping it again: base.mp4, fg.webm, track.json,
-// words.json and meta.json are all cut the same way, so the edit stays in sync.
+// faces.json, words.json and meta.json are all cut the same way, so the edit stays in sync.
 // usage: node tools/trim.mjs <slug> 6.85-8.40,37.95-39.05 [--lang ru]
 //   --lang: transcribe the trimmed clip again (whisper's times near a cut drift); hand fixes to words.json are lost
 import { execFileSync } from "node:child_process";
@@ -60,8 +60,12 @@ function main() {
   ff(["-c:v", "libvpx-vp9", "-i", path.join(dir, "fg.webm"), "-vf", `select='${sel}',setpts=N/FRAME_RATE/TB,format=yuva420p`, "-r", String(meta.fps), "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "6M", "-auto-alt-ref", "0", "-row-mt", "1", "-deadline", "realtime", "-cpu-used", "4", "-an", tmp("fg.webm")]);
   fs.renameSync(tmp("base.mp4"), path.join(dir, "base.mp4"));
   fs.renameSync(tmp("fg.webm"), path.join(dir, "fg.webm"));
-  const track = JSON.parse(fs.readFileSync(path.join(dir, "track.json"), "utf8"));
-  fs.writeFileSync(path.join(dir, "track.json"), JSON.stringify(track.filter((_, f) => keep.some(([a, b]) => f / meta.fps >= a && f / meta.fps < b))));
+  // per-frame files lose the cut frames
+  const kept = (_, f) => keep.some(([a, b]) => f / meta.fps >= a && f / meta.fps < b);
+  for (const file of ["track.json", "faces.json"]) {
+    const p = path.join(dir, file);
+    if (fs.existsSync(p)) fs.writeFileSync(p, JSON.stringify(JSON.parse(fs.readFileSync(p, "utf8")).filter(kept)));
+  }
   const words = JSON.parse(fs.readFileSync(path.join(dir, "words.json"), "utf8"));
   let next = trimWords(words, keep);
   if (lang) {

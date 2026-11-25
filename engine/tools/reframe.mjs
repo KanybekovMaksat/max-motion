@@ -9,6 +9,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { measure } from "./audio.mjs";
+import { silences } from "./prep.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const W = 1080, H = 1920, FPS = 30;
@@ -20,6 +22,18 @@ export const CLOSE = 0.075;
 
 // "12.1-27.6,63-70.5" -> [[12.1, 27.6], [63, 70.5]]
 export const parseRanges = (s) => s.split(",").map((r) => r.split("-").map(Number));
+
+// Range edges picked from whisper word times are off by up to half a second, so each edge moves
+// out to the nearest real pause (within `reach` s): the first and last words are never clipped.
+export function snapRanges(ranges, sil, reach = 0.8) {
+  return ranges.map(([a, b]) => {
+    const before = sil.filter(([, e]) => e <= a + 0.1 && e >= a - reach).map(([, e]) => e);
+    const after = sil.filter(([s]) => s >= b - 0.1 && s <= b + reach).map(([s]) => s);
+    const a2 = before.length ? Math.max(...before) - 0.1 : a - 0.1;
+    const b2 = after.length ? Math.min(...after) + 0.1 : b + 0.1;
+    return [Math.max(0, +a2.toFixed(3)), +b2.toFixed(3)];
+  });
+}
 
 // "0-20:left,20-:right" -> (t) => side
 export function sideAt(spec = "auto") {
@@ -89,7 +103,9 @@ function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "reframe-"));
   // 1. stitch the ranges (frame-accurate, re-encoded)
   let clip = path.join(tmp, "clip.mp4");
-  const ranges = opt("--ranges") ? parseRanges(opt("--ranges")) : null;
+  const lufs = measure(src) ?? -24;
+  const ranges = opt("--ranges") ? snapRanges(parseRanges(opt("--ranges")), silences(src, Math.max(-50, Math.min(-30, Math.round(lufs - 16))), 0.12)) : null;
+  if (ranges) console.log(`ranges (snapped to pauses): ${ranges.map(([a, b]) => `${a}-${b}`).join(",")}`);
   if (ranges) {
     const parts = ranges.map(([a, b], i) => `[0:v]trim=${a}:${b},setpts=PTS-STARTPTS,fps=${FPS}[v${i}];[0:a]atrim=${a}:${b},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,afade=t=out:st=${(b - a - 0.03).toFixed(3)}:d=0.03[a${i}]`);
     const cat = ranges.map((_, i) => `[v${i}][a${i}]`).join("") + `concat=n=${ranges.length}:v=1:a=1[v][a]`;
