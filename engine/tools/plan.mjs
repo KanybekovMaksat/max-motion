@@ -1,11 +1,13 @@
 // words.json -> first-draft edit.json. The rhythm of the references: one effect per stressed
 // word every ~1.2s, a giant word behind the head on most of them, a punch on every one,
 // a UI card on the last beat. Open public/<slug>/edit.json afterwards and tune by hand.
-// usage: npm run plan -- <slug> [--look sell|brand|podcast|hype|calm|luxury | --goal "продать курс родителям"] [--accent #hex] [--force]
+// usage: npm run plan -- <slug> [--look sell|brand|podcast|hype|calm|luxury | --goal "продать курс родителям"] [--accent #hex] [--logo assets/logo.svg] [--force]
+//   accent and logo default to <workspace>/public/brand.json
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { LOOKS, contentKind, numberIn, pickLook } from "./looks.mjs";
+import { stickerAt } from "./stickers.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -35,7 +37,7 @@ export function keyWords(words, gap = 1.1, strict = true) {
 const r2 = (n) => Math.round(n * 100) / 100;
 const bare = (w) => w.replace(/[.,!?…:;«»"]+/g, "");
 
-export function planEdit({ slug, words, duration, images = [], icons = ["instagram", "tiktok", "youtube", "telegram"], look = "sell", accent, platform = "all" }) {
+export function planEdit({ slug, words, duration, images = [], icons = ["instagram", "tiktok", "youtube", "telegram"], look = "sell", accent, logo, platform = "all" }) {
   const L = LOOKS[look] ?? LOOKS.sell;
   // filler-heavy speech gives too few beats; then any 4+ letter word may carry an effect
   let keys = keyWords(words, L.gap);
@@ -43,6 +45,8 @@ export function planEdit({ slug, words, duration, images = [], icons = ["instagr
   const fx = [];
   const img = (k, n) => Array.from({ length: n }, (_, j) => images[(k * n + j) % Math.max(1, images.length)]).filter(Boolean);
   const needsImages = new Set(["pop", "film", "broll"]);
+  let titles = 0, stickers = 0;
+  const shown = []; // icons already used, so the same one doesn't come back within ~8 s
   keys.forEach((w, k) => {
     const next = keys[k + 1]?.s ?? duration;
     const at = r2(Math.max(0, w.s - 0.08));
@@ -58,21 +62,34 @@ export function planEdit({ slug, words, duration, images = [], icons = ["instagr
     else fx.push({ type: "punch", at, dur: r2(Math.min(dur, 0.9)), scale: L.shakeEvery ? (k % 2 ? 1.1 : 1.16) : 1.08 });
     if (k === 0) {
       // the hook: outline + the first word, a halo when the look is loud enough
-      if (L.shakeEvery) fx.push({ type: "halo", at, dur });
+      if (L.hookHalo ?? L.shakeEvery) fx.push({ type: "halo", at, dur });
       fx.push({ type: "outline", at, dur, style: L.hookOutline });
       behind();
       return;
     }
     if (k === keys.length - 1 && keys.length > 2) {
       behind();
+      if (L.outro === "behind") return;
       fx.push({ type: "card", at: r2(at + 0.15), dur: r2(Math.max(0.6, dur - 0.15)), title: bare(w.w), badge: "✓", ...(images[0] ? { image: images[0] } : {}) });
       return;
     }
     // what the words say beats the look's default cycle
-    let kind = contentKind(words, w.i) ?? L.cycle[k % L.cycle.length];
+    let kind = contentKind(words, w.i);
+    if (!kind || L.avoid?.includes(kind)) kind = L.cycle[k % L.cycle.length];
     if (needsImages.has(kind) && !images.length) kind = "behind";
+    if (kind === "title" && L.titles != null && titles >= L.titles) kind = "sticker";
+    // a sticker needs a thing the speaker names (idea, team, money…); otherwise the word goes behind
+    const st = kind === "sticker" ? stickerAt(words, w.i, 3, new Set(shown.filter((x) => w.s - x.at < 8).map((x) => x.icon))) : null;
+    if (kind === "sticker" && !st) kind = "behind";
     const phrase = (n) => words.slice(w.i, w.i + n).map((x) => bare(x.w)).join(" ");
     if (kind === "behind") behind();
+    else if (kind === "sticker") {
+      shown.push({ icon: st.icon, at: w.s });
+      // pops on the word itself, sides alternate (the engine still moves it off any face), every 3rd one clicks
+      const sAt = r2(Math.max(0, st.at - 0.05));
+      fx.push({ type: "sticker", at: sAt, dur: r2(Math.max(1.2, Math.min(2.2, next - sAt + 0.4))), src: st.src, pos: stickers % 2 ? "right" : "left", ...(stickers % 3 === 0 ? { sound: true } : {}) });
+      stickers++;
+    }
     else if (kind === "pop") {
       fx.push({ type: "pop", at, dur, images: img(k, 3) });
       behind({ kicker: undefined });
@@ -81,7 +98,8 @@ export function planEdit({ slug, words, duration, images = [], icons = ["instagr
     } else if (kind === "title") {
       // перебивка: the speaker drops out for one beat, a whip leads into it
       fx.push({ type: "whip", at: r2(Math.max(0, at - 0.08)), dur: 0.2 });
-      fx.push({ type: "title", at, dur: r2(Math.min(dur, 1.0)), text: word, ...(kicker ? { kicker } : {}) });
+      fx.push({ type: "title", at, dur: r2(Math.min(dur, 1.0)), text: word, ...(kicker ? { kicker } : {}), ...(logo ? { logo } : {}) });
+      titles++;
     } else if (kind === "ribbon") {
       fx.push({ type: "ribbon", at, dur });
       behind();
@@ -125,7 +143,7 @@ function main() {
   const slug = argv[0];
   const flag = (n, d) => (argv.includes(n) ? argv[argv.indexOf(n) + 1] : d);
   if (!slug) {
-    console.error('usage: npm run plan -- <slug> [--look sell|brand|podcast|hype|calm|luxury | --goal "..."] [--accent #hex] [--platform reels|tiktok|shorts|all] [--force]');
+    console.error('usage: npm run plan -- <slug> [--look sell|brand|podcast|hype|calm|luxury | --goal "..."] [--accent #hex] [--logo assets/logo.svg] [--platform reels|tiktok|shorts|all] [--force]');
     process.exit(1);
   }
   const dir = path.join(ROOT, "public", slug);
@@ -140,7 +158,10 @@ function main() {
   const images = fs.existsSync(adir) ? fs.readdirSync(adir).filter((f) => /\.(jpe?g|png|webp)$/i.test(f)).sort().map((f) => `assets/${f}`) : [];
   const look = flag("--look", null) ?? pickLook(flag("--goal", ""));
   if (!LOOKS[look]) throw new Error(`unknown look "${look}" — ${Object.keys(LOOKS).join(", ")}`);
-  const edit = planEdit({ slug, words, duration: meta.duration, images, look, accent: flag("--accent", undefined), platform: flag("--platform", "all") });
+  // the user's brand, saved once in <workspace>/public/brand.json: { "accent": "#hex", "logo": "assets/logo.svg" }
+  const bfile = path.join(ROOT, "public", "brand.json");
+  const brand = fs.existsSync(bfile) ? JSON.parse(fs.readFileSync(bfile, "utf8")) : {};
+  const edit = planEdit({ slug, words, duration: meta.duration, images, look, accent: flag("--accent", brand.accent), logo: flag("--logo", brand.logo), platform: flag("--platform", "all") });
   if (!["reels", "tiktok", "shorts", "all"].includes(edit.platform)) throw new Error(`unknown platform "${edit.platform}" — reels, tiktok, shorts or all`);
   fs.writeFileSync(file, JSON.stringify(edit, null, 2));
   console.log(`edit.json: look "${look}" (${LOOKS[look].label}), ${edit.fx.length} effects`);

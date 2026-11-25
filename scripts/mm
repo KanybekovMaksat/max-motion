@@ -5,13 +5,13 @@
 #                                     multi-camera podcast → 9:16, a still crop per shot on one person (then prep it)
 #   mm prep <video> <slug> [--lang ru|en|auto] [--cut]
 #   mm trim <slug> 6.85-8.40,37.95-39.05 [--lang ru]   cut spans out of a prepped clip (video, cutout, words) — before editing
-#   mm plan <slug> [--goal "..."] [--look sell|brand|podcast|hype|calm|luxury] [--accent #hex] [--force]
+#   mm plan <slug> [--goal "..."] [--look sell|brand|podcast|hype|calm|luxury] [--accent #hex] [--logo assets/logo.svg] [--force]
 #   mm plan … [--platform reels|tiktok|shorts|all]   keep captions/cards out of that app's UI (default all)
 #   mm still <slug> <sec> [--comp ProEdit|Showcase|ClaudeChat|PromptResult] [--safe [reels|tiktok|shorts|all]]
 #   mm render <slug> [--wrap showcase,chat,prompt|all] [--safe [platform]]   --safe = preview with the app UI on top
 #   mm safezones                      export the safe-zone templates (transparent PNG) to <workspace>/out/safe-zones/
 #   mm sfx [pack folder | Yandex Disk link]   build the sound library (public/sfx); no argument = the skill's sounds/pack
-#   mm music <slug> <track> [--start <sec>] [--volume 0.4] [--duck 0.2]   music bed, ducked under the voice
+#   mm music <slug> <track> [--start <sec>] [--volume 0.28] [--duck 0.12]   music bed, ducked under the voice
 #   mm looks                          list looks
 #   mm studio                         open Remotion Studio
 #   mm home                           print the workspace path

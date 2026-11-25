@@ -1,6 +1,6 @@
 // Audio levels: how loud the voice is (sound effects and music are scaled to it), the music bed
 // for a clip, and the final loudness of the reel (-14 LUFS, what Reels / TikTok / Shorts play at).
-// usage: node tools/audio.mjs music <slug> <file> [--start <sec in the track>] [--volume 0.4] [--duck 0.2]
+// usage: node tools/audio.mjs music <slug> <file> [--start <sec in the track>] [--volume 0.28] [--duck 0.12]
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -41,7 +41,7 @@ export function master(mp4) {
 
 // music bed: the part of the track from `start`, compressed and levelled to the voice reference,
 // saved as public/<slug>/music.mp3 and switched on in edit.json
-export function music(slug, src, { start = 0, volume = 0.4, duck = 0.2 } = {}) {
+export function music(slug, src, { start = 0, volume = 0.28, duck = 0.12 } = {}) {
   const dir = path.join(ROOT, "public", slug);
   const meta = JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8"));
   const out = path.join(dir, "music.mp3");
@@ -64,11 +64,11 @@ function main() {
   const [cmd, slug, file, ...rest] = process.argv.slice(2);
   const flag = (n, d) => (rest.includes(n) ? Number(rest[rest.indexOf(n) + 1]) : d);
   if (cmd !== "music" || !slug || !file) {
-    console.error("usage: node tools/audio.mjs music <slug> <file> [--start <sec>] [--volume 0.4] [--duck 0.2]");
+    console.error("usage: node tools/audio.mjs music <slug> <file> [--start <sec>] [--volume 0.28] [--duck 0.12]");
     process.exit(1);
   }
-  const out = music(slug, path.resolve(file), { start: flag("--start", 0), volume: flag("--volume", 0.4), duck: flag("--duck", 0.2) });
-  console.log(`music → ${out} (in pauses ${flag("--volume", 0.4) * 100}%, under the voice ${flag("--duck", 0.2) * 100}%)`);
+  const out = music(slug, path.resolve(file), { start: flag("--start", 0), volume: flag("--volume", 0.28), duck: flag("--duck", 0.12) });
+  console.log(`music → ${out} (in pauses ${flag("--volume", 0.28) * 100}%, under the voice ${flag("--duck", 0.12) * 100}%)`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

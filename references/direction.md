@@ -90,13 +90,14 @@ The picture carries the meaning, text is the minimum:
 - **Real visuals, not interface**: `sticker` 3D icons for things and ideas, `broll` real photos for images in the speech, `pop` photos, `particles` globe for "world / everyone". Text cards (`card`, `progress`, `checklist`) only for a real number or offer.
 - Icons: Microsoft Fluent Emoji 3D (MIT) — `https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/<Name>/3D/<name>_3d.png` (e.g. `Light bulb/3D/light_bulb_3d.png`) → `public/assets/icons/`. Photos: Wikimedia Commons API (free licences, keep a `CREDITS.md` next to them) → crop 9:16 → `public/assets/photos/`.
 - One title card at the turn of the argument, dark room grade (`grade.room`), sound between "structure" and "every meaning".
+- The `podcast` look is this format as saved defaults (approved on «Успех = успеть», Codify Podcast #10): cond words behind the head, beats every ~1.6 s cycling sticker / behind / one title, no halo, no backdrop, no chat or checklist cards, the last beat a word behind the head (no card), room grade {dim .4, desat .5, blur 5}, sound at 1 with the default budget, music `mm music` at 0.28 / ducked 0.12. The plan's title lands on the cycle; move it by hand to the sentence that turns the argument and give it the thesis as text.
 - Check every reel by ear: transcribe the render and compare with the source — no word may be lost.
 
 ## 6. Three worked briefs
 
 **"Курс программирования для подростков, продать пробный урок"** — goal sell, audience teens and parents, the speaker is a teacher at 2.6 w/s → `sell` with `--accent` from the brand; numbers ("12 уроков", "3 месяца") → counters; the closing "запишитесь" → `card` "Пробный урок ✓". Captions `mix` with `captionKeys` on the numbers.
 
-**"Подкаст: почему ИИ не заменит программистов"** — `podcast`; "по данным" + number → `counter`, "рост" → `chart`, "во-первых / во-вторых" → `title` with `path`; captions `serif`; rim outline on the hook.
+**"Подкаст: почему ИИ не заменит программистов"** — `podcast`; "по данным" + number → `counter`, "рост" → `chart`, "ИИ", "программист", "команда" → stickers, the thesis → the one `title` with the brand logo; captions `mix`; rim outline on the hook.
 
 **"Объясняем родителям, что ребёнок делает на уроке"** — `calm`, `clean` captions, steps → `checklist`, one `quote` from a parent, no shakes, sound at 0.5.
 

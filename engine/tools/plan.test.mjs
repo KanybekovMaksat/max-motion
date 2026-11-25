@@ -144,3 +144,33 @@ test("face samples become one box per frame, biggest face, nearest sample", asyn
   assert.equal(d[6].x, 648); // nearest real sample is frame 10
   assert.equal(d[39], null); // too far from any sample
 });
+
+test("stickers: named things map to real icons, short stems don't misfire", async () => {
+  const { iconFor, stickerAt } = await import("./stickers.mjs");
+  assert.equal(iconFor("команда"), "busts_in_silhouette");
+  assert.equal(iconFor("идею"), "light_bulb");
+  assert.equal(iconFor("Технология,"), "robot");
+  assert.equal(iconFor("ИИ"), "robot");
+  assert.equal(iconFor("идет"), null); // not an idea
+  assert.equal(iconFor("сомневаюсь"), null); // not soms
+  assert.equal(iconFor("и"), null);
+  const words = [{ w: "самая", s: 1 }, { w: "крутая", s: 1.3 }, { w: "команда", s: 1.7 }];
+  assert.deepEqual(stickerAt(words, 0), { src: "assets/icons/busts_in_silhouette_3d.png", icon: "busts_in_silhouette", at: 1.7 });
+  assert.equal(stickerAt(words, 0, 3, new Set(["busts_in_silhouette"])), null);
+});
+
+test("podcast plan: stickers instead of text cards, one title with the logo", async () => {
+  const { planEdit } = await import("./plan.mjs");
+  const text = "выживают не те которые придумали самую крутую идею или самая крутая команда или технология нет выживают те которые умудряются от провала к провалу идти быстро протестировали пошли дальше искать свет успех равно успеть количество качественных решений лучше быстрее принять решение чем ничего не делать";
+  const words = text.split(" ").map((w, i) => ({ w, s: i * 0.45, e: i * 0.45 + 0.4 }));
+  const edit = planEdit({ slug: "t", words, duration: words.length * 0.45, look: "podcast", accent: "#00C4FA", logo: "assets/codify-logo.svg" });
+  const types = edit.fx.map((f) => f.type);
+  assert.ok(types.includes("sticker"));
+  for (const bad of ["card", "chat", "checklist", "particles", "halo"]) assert.ok(!types.includes(bad), bad);
+  const titles = edit.fx.filter((f) => f.type === "title");
+  assert.ok(titles.length <= 1);
+  for (const t of titles) assert.equal(t.logo, "assets/codify-logo.svg");
+  for (const s of edit.fx.filter((f) => f.type === "sticker")) assert.match(s.src, /^assets\/icons\/\w+_3d\.png$/);
+  assert.equal(edit.accent, "#00C4FA");
+  assert.equal(edit.fx.find((f) => f.type === "behind").font, "cond");
+});

@@ -31,19 +31,24 @@ export const LOOKS = {
     sfx: 0.8,
     backdrop: "rays",
   },
-  // podcast, interview, expert opinion: dark, cinematic, serif, metal
+  // podcast, interview, expert opinion: dark room, bright person, condensed metal word behind the head,
+  // real 3D icons for the things named, one title card at the turn, no UI text cards
   podcast: {
     label: "Подкаст / эксперт",
     accent: "#6E8BFF",
     captionStyle: "mix",
-    behindFont: "serif",
+    behindFont: "cond",
     grade: { contrast: 1.1, saturate: 0.95, brightness: 0.96, vignette: 0.6, room: { dim: 0.4, desat: 0.5, blur: 5 } },
-    gap: 1.4,
-    shakeEvery: 4,
+    gap: 1.6,
+    shakeEvery: 6,
     hookOutline: "rim",
-    cycle: ["behind", "particles", "title", "behind", "counter", "chat", "behind", "chart", "title"],
-    sfx: 0.7,
-    backdrop: "backlight",
+    hookHalo: false,
+    cycle: ["sticker", "behind", "sticker", "sticker", "title", "behind", "sticker", "sticker", "behind", "sticker"],
+    titles: 1, // at most one перебивка per reel
+    avoid: ["chat", "checklist"], // spoken questions and lists stay in the captions
+    outro: "behind",
+    sfx: 1,
+    backdrop: null,
   },
   // news, trends, teens, hot takes: loud, fast, one word at a time
   hype: {
