@@ -67,7 +67,7 @@ Map the content first, then fill the rest from the look's cycle.
 | a question, someone's words | `chat` |
 | a goal, a result, readiness | `progress` or `card` with a ✓ badge |
 | a place, a product, "look at this" | `pop` photos (+ `sticker` outline) or `broll` with a `whip` before |
-| a thing or an idea ("идея", "команда", "единорог", "время") | `sticker` — a real 3D icon next to the head, not a card with the word on it; a list of wrong answers ("не идея, не команда, не технология") = stickers that `strike` on the "нет" |
+| a thing or an idea ("идея", "команда", "единорог", "время") | `sticker` — an icon next to the head (`icon:<name>`, white glowing dots), not a card with the word on it and not an emoji; a list of wrong answers ("не идея, не команда, не технология") = stickers that `strike` on the "нет" |
 | an image in the speech ("свет в конце туннеля") | `broll` with a real photo, 1–1.5 s |
 | growth, decline, statistics | `chart` |
 | the world, AI, data, "everyone" | `particles` globe |
@@ -87,10 +87,10 @@ Intensity knobs, per look:
 
 The picture carries the meaning, text is the minimum:
 - **Concept word behind the head** on most key phrases: condensed metal word + small kicker ("build an **EMPIRE**" → «кто **ВЫЖИВАЕТ**», «лучше **БЫСТРЕЕ**»), `captionBehind: false` so captions don't add their own.
-- **Real visuals, not interface**: `sticker` 3D icons for things and ideas, `broll` real photos for images in the speech, `pop` photos, `particles` globe for "world / everyone". Text cards (`card`, `progress`, `checklist`) only for a real number or offer.
-- Icons: Microsoft Fluent Emoji 3D (MIT) — `https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/<Name>/3D/<name>_3d.png` (e.g. `Light bulb/3D/light_bulb_3d.png`) → `public/assets/icons/`. Photos: Wikimedia Commons API (free licences, keep a `CREDITS.md` next to them) → crop 9:16 → `public/assets/photos/`.
+- **Real visuals, not interface**: `sticker` icons for things and ideas (monochrome dot-matrix, like the references' dotted bed / heart — colourful emoji look cheap next to the dark grade), `broll` real photos for images in the speech, `pop` photos, `particles` globe for "world / everyone". Text cards (`card`, `progress`, `checklist`) only for a real number or offer.
+- Icons: Phosphor fill icons (MIT) in `engine/src/icon-paths.json`, more from `https://raw.githubusercontent.com/phosphor-icons/core/main/assets/fill/<name>-fill.svg` (the inner markup goes into the JSON). Photos: Wikimedia Commons API (free licences, keep a `CREDITS.md` next to them) → crop 9:16 → `public/assets/photos/`.
 - One title card at the turn of the argument, dark room grade (`grade.room`), sound between "structure" and "every meaning".
-- The `podcast` look is this format as saved defaults (approved on «Успех = успеть», Codify Podcast #10): cond words behind the head, beats every ~1.6 s cycling sticker / behind / one title, no halo, no backdrop, no chat or checklist cards, the last beat a word behind the head (no card), room grade {dim .4, desat .5, blur 5}, sound at 1 with the default budget, music `mm music` at 0.28 / ducked 0.12. The plan's title lands on the cycle; move it by hand to the sentence that turns the argument and give it the thesis as text.
+- The `podcast` look is this format as saved defaults (approved on «Успех = успеть», Codify Podcast #10): cond words behind the head, beats every ~1.6 s cycling dot-icon sticker / behind / one title, no halo, no backdrop, no chat or checklist cards, the last beat a word behind the head (no card), room grade {dim .4, desat .5, blur 5}, sound at 1 with the default budget, music `mm music` at 0.28 / ducked 0.12. The plan's title lands on the cycle; move it by hand to the sentence that turns the argument and give it the thesis as text.
 - Check every reel by ear: transcribe the render and compare with the source — no word may be lost.
 
 ## 6. Three worked briefs

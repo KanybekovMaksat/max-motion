@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, Img, OffthreadVideo, interpolate, random, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { COND, SANS, SERIF } from "./fonts";
 import { AppIcon } from "./icons";
+import ICONS from "./icon-paths.json";
 import { useKeepOut, useSafe, useSlot } from "./safe";
 import { clamp01, ease, envelope, pop } from "./time";
 import type { Face, Fx, Head, StickerPos } from "./types";
@@ -137,43 +138,97 @@ export const Pop: React.FC<P<"pop">> = ({ fx, len, head }) => {
   );
 };
 
-// ── STICKER: a real picture (3D icon, cut-out PNG) pops next to the head on its word ──
+// ── DOT ICON: a monochrome icon built from glowing dots (the references' dot-matrix objects) ──
+// a grid of dots masked by the icon shape; dots switch on in a scattered order, a light sweep runs
+// across, a soft accent bloom sits behind. `dim` (0..1) fades it for a strike-through.
+const GRID = 30; // dots across the 256-unit icon box
+export const DotIcon: React.FC<{ name: string; size: number; f: number; fps: number; accent: string; dim?: number; id: string }> = ({ name, size, f, fps, accent, dim = 0, id }) => {
+  const shape = (ICONS as Record<string, string>)[name];
+  if (!shape) throw new Error(`unknown icon "${name}" — see src/icon-paths.json`);
+  const step = 256 / GRID;
+  const dots: React.ReactNode[] = [];
+  for (let gy = 0; gy < GRID; gy++) {
+    for (let gx = 0; gx < GRID; gx++) {
+      const x = (gx + 0.5) * step, y = (gy + 0.5) * step;
+      const on = pop(f, fps, random(`${id}-${gx}-${gy}`) * 9, 14, 220);
+      if (on <= 0.01) continue;
+      // light sweep: a diagonal band of brighter, slightly bigger dots
+      const sweep = Math.max(0, Math.cos((x + y) / 70 - f / 7));
+      const r = step * (0.3 + 0.1 * sweep) * Math.min(1.15, on);
+      dots.push(<circle key={`${gx}-${gy}`} cx={x} cy={y} r={r} fillOpacity={(0.55 + 0.45 * sweep) * (1 - 0.6 * dim)} />);
+    }
+  }
+  return (
+    <svg viewBox="0 0 256 256" width={size} height={size} style={{ position: "absolute", inset: 0, overflow: "visible", filter: "drop-shadow(0 6px 16px rgba(0,0,0,.6))" }}>
+      <defs>
+        <mask id={`${id}-m`} maskUnits="userSpaceOnUse" x={0} y={0} width={256} height={256}>
+          <g fill="#fff" dangerouslySetInnerHTML={{ __html: shape }} />
+        </mask>
+        <radialGradient id={`${id}-b`}>
+          <stop offset="0%" stopColor={accent} stopOpacity={0.35 * (1 - dim)} />
+          <stop offset="100%" stopColor={accent} stopOpacity={0} />
+        </radialGradient>
+        <filter id={`${id}-g`} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.5" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <circle cx={128} cy={128} r={150} fill={`url(#${id}-b)`} opacity={clamp01(f / 10)} />
+      <g mask={`url(#${id}-m)`} filter={`url(#${id}-g)`} fill="#F4F7FB">
+        {dots}
+      </g>
+    </svg>
+  );
+};
+
+// ── STICKER: an icon (`icon:<name>`, dot style) or a real picture (cut-out PNG) pops next to the head on its word ──
 // spring in with a twist, floats, scales out; `strike` greys it out and draws a red line across.
 // Placed around the head (in face widths), kept inside the safe box and above the caption band.
 const STICKER_AT: Record<StickerPos, [number, number]> = {
   left: [-1, 0.2], right: [1, 0.2], "top-left": [-0.85, -0.6], "top-right": [0.85, -0.6], "low-left": [-1.05, 1.05], "low-right": [1.05, 1.05],
 };
-export const Sticker: React.FC<P<"sticker">> = ({ fx, len, faceAt }) => {
+export type Spot = { x: number; y: number; kx: number };
+type Box = { top: number; left: number; right: number };
+// where a sticker goes: the asked-for spot unless it covers the face (in any shot of its life — a cut may
+// move the face) or a sticker already on screen; then the mirrored spot, the top corners, the low ones,
+// else the least bad. `faceAt` takes the sticker's local frame.
+export function stickerSpot(fx: Extract<Fx, { type: "sticker" }>, faceAt: (f: number) => Face, len: number, S: Box, floor: number, taken: (Spot & { size: number })[] = []): Spot {
+  const size = fx.size ?? 280;
+  const c = faceAt(0);
+  const seen = [0, Math.floor(len / 2), len - 1].map(faceAt);
+  const overlap = (x: number, y: number, l: number, r: number, t: number, b: number) =>
+    Math.max(0, Math.min(x + size * 0.42, r) - Math.max(x - size * 0.42, l)) * Math.max(0, Math.min(y + size * 0.42, b) - Math.max(y - size * 0.42, t));
+  const place = (p: StickerPos) => {
+    const [kx, ky] = STICKER_AT[p];
+    const x = Math.min(1080 - S.right - size / 2, Math.max(S.left + size / 2, c.x + kx * (c.w * 0.75 + size * 0.5)));
+    const y = Math.min(floor - size / 2 - 10, Math.max(S.top + size / 2, c.y + ky * c.h * 1.1));
+    // px² over the face and hairline (cheek to cheek, forehead to chin), summed over its life,
+    // plus the other stickers (counted double: two icons on top of each other read as a mess)
+    const face = seen.reduce((sum, q) => sum + overlap(x, y, q.x - q.w * 0.6, q.x + q.w * 0.6, q.y - q.h * 0.8, q.y + q.h * 0.6), 0);
+    const other = taken.reduce((sum, o) => sum + 2 * overlap(x, y, o.x - o.size * 0.5, o.x + o.size * 0.5, o.y - o.size * 0.5, o.y + o.size * 0.5), 0);
+    return { x, y, kx, hit: face + other };
+  };
+  const want = fx.pos ?? "right";
+  const mirror = (want.includes("left") ? want.replace("left", "right") : want.replace("right", "left")) as StickerPos;
+  const tries = [want, mirror, "top-left", "top-right", "low-left", "low-right"].map((p) => place(p as StickerPos));
+  const { x, y, kx } = tries.find((t) => t.hit === 0) ?? tries.reduce((a, b) => (b.hit < a.hit ? b : a));
+  return { x, y, kx };
+}
+
+export const Sticker: React.FC<P<"sticker"> & { spot?: Spot }> = ({ fx, accent, len, faceAt, spot }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const S = useSafe();
   const floor = useKeepOut();
   const size = fx.size ?? 280;
-  // the face where it appears; the spot must stay clear of the face for its whole life (a shot may change)
-  const c = faceAt(0);
-  const seen = [0, Math.floor(len / 2), len - 1].map(faceAt);
-  const place = (p: StickerPos) => {
-    const [kx, ky] = STICKER_AT[p];
-    const x = Math.min(1080 - S.right - size / 2, Math.max(S.left + size / 2, c.x + kx * (c.w * 0.75 + size * 0.5)));
-    const y = Math.min(floor - size / 2 - 10, Math.max(S.top + size / 2, c.y + ky * c.h * 1.1));
-    // overlap with the face and hairline (cheek to cheek, forehead to chin), px², summed over its life
-    const hit = seen.reduce((sum, q) => {
-      const ox = Math.max(0, Math.min(x + size * 0.42, q.x + q.w * 0.6) - Math.max(x - size * 0.42, q.x - q.w * 0.6));
-      const oy = Math.max(0, Math.min(y + size * 0.42, q.y + q.h * 0.6) - Math.max(y - size * 0.42, q.y - q.h * 0.8));
-      return sum + ox * oy;
-    }, 0);
-    return { x, y, kx, hit };
-  };
-  // the asked-for spot unless it covers the face (pushed against the screen edge, a head off-centre):
-  // then the mirrored spot, then the top corners, then the least bad one
-  const want = fx.pos ?? "right";
-  const mirror = (want.includes("left") ? want.replace("left", "right") : want.replace("right", "left")) as StickerPos;
-  const tries = [want, mirror, "top-left", "top-right", "low-left", "low-right"].map((p) => place(p as StickerPos));
-  const spot = tries.find((t) => t.hit === 0) ?? tries.reduce((a, b) => (b.hit < a.hit ? b : a));
-  const { x: cx, y: cy, kx } = spot;
+  const { x: cx, y: cy, kx } = spot ?? stickerSpot(fx, faceAt, len, S, floor);
   const p = pop(f, fps, 0, 11, 260);
   const out = envelope(f, 0, len, 1, 6);
-  const tilt = fx.tilt ?? (kx < 0 ? -8 : 8);
+  const icon = fx.src.startsWith("icon:");
+  const tilt = fx.tilt ?? (icon ? 0 : kx < 0 ? -8 : 8);
   const struck = fx.strike !== undefined ? clamp01((f - fx.strike * fps) / 6) : 0;
   return (
     <AbsoluteFill>
@@ -188,7 +243,11 @@ export const Sticker: React.FC<P<"sticker">> = ({ fx, len, faceAt }) => {
           transform: `translateY(${Math.sin((f + size) / 13) * 7}px) scale(${(0.2 + 0.8 * p) * (0.85 + 0.15 * out)}) rotate(${tilt * p + (1 - p) * -30}deg)`,
         }}
       >
-        <Img src={src(fx.src)} style={{ width: "100%", height: "100%", objectFit: "contain", filter: `drop-shadow(0 22px 34px rgba(0,0,0,.55)) grayscale(${struck}) brightness(${1 - 0.35 * struck})` }} />
+        {fx.src.startsWith("icon:") ? (
+          <DotIcon name={fx.src.slice(5)} size={size} f={f} fps={fps} accent={accent} dim={struck} id={`dots-${Math.round(fx.at * 100)}`} />
+        ) : (
+          <Img src={src(fx.src)} style={{ width: "100%", height: "100%", objectFit: "contain", filter: `drop-shadow(0 22px 34px rgba(0,0,0,.55)) grayscale(${struck}) brightness(${1 - 0.35 * struck})` }} />
+        )}
         {struck > 0 ? (
           <svg width={size} height={size} style={{ position: "absolute", inset: 0, overflow: "visible" }}>
             <line x1={size * 0.08} y1={size * 0.92} x2={size * 0.08 + size * 0.84 * struck} y2={size * 0.92 - size * 0.84 * struck} stroke="#FF3D57" strokeWidth={size * 0.07} strokeLinecap="round" />

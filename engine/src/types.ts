@@ -65,7 +65,8 @@ export type Fx =
   | (Base & { type: "progress"; title: string })
   // dot globe / dot grid behind the head
   | (Base & { type: "particles"; shape?: "globe" | "grid" })
-  // a real picture instead of a text card: a 3D icon / cut-out PNG pops next to the head on its word;
+  // a picture instead of a text card, popping next to the head on its word: src "icon:<name>" = a monochrome
+  // icon drawn in glowing dots (names in src/icon-paths.json), or an image path (cut-out PNG, photo);
   // strike = seconds after the start when it greys out and gets crossed; behind = under the person
   | (Base & { type: "sticker"; src: string; pos?: StickerPos; size?: number; tilt?: number; strike?: number; label?: string; behind?: boolean })
   // line chart drawing itself, full card

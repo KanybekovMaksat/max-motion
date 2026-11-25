@@ -32,7 +32,7 @@ export const LOOKS = {
     backdrop: "rays",
   },
   // podcast, interview, expert opinion: dark room, bright person, condensed metal word behind the head,
-  // real 3D icons for the things named, one title card at the turn, no UI text cards
+  // dot-matrix icons for the things named, one title card at the turn, no UI text cards
   podcast: {
     label: "Подкаст / эксперт",
     accent: "#6E8BFF",

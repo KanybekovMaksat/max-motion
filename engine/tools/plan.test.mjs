@@ -147,16 +147,16 @@ test("face samples become one box per frame, biggest face, nearest sample", asyn
 
 test("stickers: named things map to real icons, short stems don't misfire", async () => {
   const { iconFor, stickerAt } = await import("./stickers.mjs");
-  assert.equal(iconFor("команда"), "busts_in_silhouette");
-  assert.equal(iconFor("идею"), "light_bulb");
+  assert.equal(iconFor("команда"), "users-three");
+  assert.equal(iconFor("идею"), "lightbulb");
   assert.equal(iconFor("Технология,"), "robot");
   assert.equal(iconFor("ИИ"), "robot");
   assert.equal(iconFor("идет"), null); // not an idea
   assert.equal(iconFor("сомневаюсь"), null); // not soms
   assert.equal(iconFor("и"), null);
   const words = [{ w: "самая", s: 1 }, { w: "крутая", s: 1.3 }, { w: "команда", s: 1.7 }];
-  assert.deepEqual(stickerAt(words, 0), { src: "assets/icons/busts_in_silhouette_3d.png", icon: "busts_in_silhouette", at: 1.7 });
-  assert.equal(stickerAt(words, 0, 3, new Set(["busts_in_silhouette"])), null);
+  assert.deepEqual(stickerAt(words, 0), { src: "icon:users-three", icon: "users-three", at: 1.7 });
+  assert.equal(stickerAt(words, 0, 3, new Set(["users-three"])), null);
 });
 
 test("podcast plan: stickers instead of text cards, one title with the logo", async () => {
@@ -170,7 +170,16 @@ test("podcast plan: stickers instead of text cards, one title with the logo", as
   const titles = edit.fx.filter((f) => f.type === "title");
   assert.ok(titles.length <= 1);
   for (const t of titles) assert.equal(t.logo, "assets/codify-logo.svg");
-  for (const s of edit.fx.filter((f) => f.type === "sticker")) assert.match(s.src, /^assets\/icons\/\w+_3d\.png$/);
+  const icons = JSON.parse(fs.readFileSync(new URL("../src/icon-paths.json", import.meta.url), "utf8"));
+  for (const s of edit.fx.filter((f) => f.type === "sticker")) assert.ok(s.src.startsWith("icon:") && icons[s.src.slice(5)], s.src);
   assert.equal(edit.accent, "#00C4FA");
   assert.equal(edit.fx.find((f) => f.type === "behind").font, "cond");
+});
+
+test("every icon the speech can name exists in icon-paths.json", async () => {
+  const src = fs.readFileSync(new URL("./stickers.mjs", import.meta.url), "utf8");
+  const icons = JSON.parse(fs.readFileSync(new URL("../src/icon-paths.json", import.meta.url), "utf8"));
+  const named = [...src.matchAll(/^  \["([\w-]+)", "/gm)].map((m) => m[1]);
+  assert.ok(named.length > 50);
+  assert.deepEqual(named.filter((n) => !icons[n]), []);
 });

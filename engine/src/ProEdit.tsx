@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, CalculateMetadataFunction, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { SANS } from "./fonts";
-import { Backlight, Behind, Broll, Card, Film, Grain, Halo, Orbit, Pop, Quote, Rays, Ribbon, Search, Sticker } from "./fx";
+import { Backlight, Behind, Broll, Card, Film, Grain, Halo, Orbit, Pop, Quote, Rays, Ribbon, Search, Sticker, stickerSpot, type Spot } from "./fx";
 import { Chart, Chat, Checklist, CleanCaptions, Counter, Particles, Progress, SerifCaptions, Title, WordCaptions } from "./fx2";
 import { CaptionBack, MixCaptions, captionPlan } from "./captions";
 import { Music, Sounds, voiceGain, type SfxIndex } from "./sound";
-import { SafeOverlay, SafeProvider, useSafe, zoneOf, type Platform } from "./safe";
+import { SafeOverlay, SafeProvider, useKeepOut, useSafe, zoneOf, type Platform } from "./safe";
 import { envelope, pop } from "./time";
 import type { Edit, Face, Fx, Head, Meta, Word } from "./types";
 
@@ -29,7 +29,7 @@ const OVER = new Set<Fx["type"]>(["broll", "chart", "title"]);
 // these render twice: once under the person, once over
 const BOTH = new Set<Fx["type"]>(["orbit", "ribbon"]);
 
-type FxProps = { face: Meta["face"]; accent: string; len: number; head: (f: number) => Head; faceAt: (f: number) => Face };
+type FxProps = { face: Meta["face"]; accent: string; len: number; head: (f: number) => Head; faceAt: (f: number) => Face; spot?: Spot };
 
 function render(fx: Fx, props: FxProps, side: "back" | "front") {
   switch (fx.type) {
@@ -68,6 +68,20 @@ const faceOf = (faces: (Face | null)[], track: Head[], meta: Meta, frame: number
 
 const Layer: React.FC<{ edit: Edit; meta: Meta; track: Head[]; faces: (Face | null)[]; side: "back" | "front" | "over" }> = ({ edit, meta, track, faces, side }) => {
   const { fps } = useVideoConfig();
+  const S = useSafe();
+  const floor = useKeepOut();
+  // sticker spots in time order: each one avoids the faces and the stickers still on screen
+  const spots = useMemo(() => {
+    const out = new Map<number, Spot & { size: number }>();
+    edit.fx.forEach((fx, i) => {
+      if (fx.type !== "sticker") return;
+      const from = Math.round(fx.at * fps);
+      const taken = [...out.entries()].filter(([j]) => edit.fx[j].at + edit.fx[j].dur > fx.at && edit.fx[j].at < fx.at + fx.dur).map(([, s]) => s);
+      const spot = stickerSpot(fx, (f) => faceOf(faces, track, meta, from + f), Math.max(1, Math.round(fx.dur * fps)), S, floor, taken);
+      out.set(i, { ...spot, size: fx.size ?? 280 });
+    });
+    return out;
+  }, [edit.fx, faces, track, meta, fps, S, floor]);
   return (
     <>
       {edit.fx.map((fx, i) => {
@@ -81,7 +95,7 @@ const Layer: React.FC<{ edit: Edit; meta: Meta; track: Head[]; faces: (Face | nu
         const len = Math.max(1, Math.round(fx.dur * fps));
         return (
           <Sequence key={i} from={from} durationInFrames={len} layout="none">
-            <AbsoluteFill>{render(fx, { face: meta.face, accent: edit.accent, len, head: (f) => headAt(track, from + f), faceAt: (f) => faceOf(faces, track, meta, from + f) }, side === "front" ? "front" : "back")}</AbsoluteFill>
+            <AbsoluteFill>{render(fx, { face: meta.face, accent: edit.accent, len, head: (f) => headAt(track, from + f), faceAt: (f) => faceOf(faces, track, meta, from + f), spot: spots.get(i) }, side === "front" ? "front" : "back")}</AbsoluteFill>
           </Sequence>
         );
       })}
